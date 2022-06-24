@@ -1,6 +1,13 @@
 #include "UI.hpp"
 
 namespace ui {
+    void process::operator()(surface*&) {
+    }
+    void process::operator()(obj*&) {
+    }
+    void process::operator()(rect*&) {
+    }
+
     window::window(const char* title, const math::vec2& size)
     :screen(NULL), renderer(NULL), running(true)
     {
@@ -18,16 +25,9 @@ namespace ui {
     }
 
     void window::update() {
-        for (surface* s: surfaces) {
-            if (s->enabled)
-                s->update();
-        }
-        for (obj* o: objs) {
-            if (o->enabled)
-                o->update();
-        }
-        for (rect* r: rects) {
-            if (r)
+        for (auto c: children) {
+            if (c->enabled)
+                std::visit(process(), c);
         }
         while (SDL_PollEvent(&event)) {
             switch(event.type) {

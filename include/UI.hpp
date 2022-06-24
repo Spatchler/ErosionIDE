@@ -11,6 +11,12 @@ namespace ui {
     class color;
     class rect;
 
+    struct process {
+        void operator()(surface*&);
+        void operator()(obj*&);
+        void operator()(rect*&);
+    };
+
     class window {
     public:
         window(const char* title, const math::vec2& size);
@@ -18,6 +24,7 @@ namespace ui {
         void update();
         void split(std::vector<unsigned short> p_ratio);
 
+        std::vector<std::variant<surface*, obj*, rect*>> children;
         std::vector<surface*> surfaces;
         std::vector<obj*> objs;
         std::vector<rect*> rects;

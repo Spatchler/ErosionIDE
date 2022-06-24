@@ -8,6 +8,9 @@ int main(int argc, char* args[]) {
 
     window.split({1, 6});
 
+    window.assign(fileExplorer, 1);
+    window.assign(mainWorkspace, 2);
+
     while (window.running) {
         window.update();
     }
