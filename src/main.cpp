@@ -3,13 +3,12 @@
 int main(int argc, char* args[]) {    
     ui::window window = ui::window("Erosion IDE - vALPHA", math::vec2(1280, 720));
 
-    ui::surface mainWorkspace;
-    ui::surface fileExplorer;
+    // ui::surface mainWorkspace, fileExplorer;
 
-    window.split({1, 6});
+    // window.split({1, 6}, {&fileExplorer, &mainWorkspace});
 
-    window.assign(fileExplorer, 1);
-    window.assign(mainWorkspace, 2);
+    ui::rect testRect r;
+    window.children.emplace_back(&r);
 
     while (window.running) {
         window.update();
