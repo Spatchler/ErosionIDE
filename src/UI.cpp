@@ -3,6 +3,18 @@
 namespace ui {
     window window::instance;
 
+    void process::operator()(surface* s) {
+        s->update();
+    }
+    void process::operator()(obj* o) {
+        o->update();
+    }
+    void process::operator()(std::pair<rect*, color*> p) {
+        rect* r = std::get<0>(p);
+        r->update();
+        r->render(window::get().getSDLRenderer(), std::get<1>(p));
+    }
+
     void window::init(const char* title, const math::vec2i& size) {
         if (!initalized) {
             screen, renderer = NULL;
@@ -27,6 +39,7 @@ namespace ui {
     }
 
     void window::update() {
+        SDL_RenderClear(renderer);
         for (auto c: updateLayer) {
             std::visit(process{}, c);
         }
@@ -36,7 +49,7 @@ namespace ui {
                     running = false;
             }
         }
-        SDL_RenderClear(renderer);
+        SDL_RenderPresent(renderer);
     }
 
     void window::split(std::vector<unsigned short>& p_ratio, std::vector<surface*>& p_surfs) {
@@ -44,17 +57,8 @@ namespace ui {
             updateLayer.emplace_back(p_surfs.at(i));
     }
 
-    void window::process::operator()(surface* s) {
-        s->update();
-    }
-    void window::process::operator()(obj* o) {
-        o->update();
-    }
-    void window::process::operator()(std::pair<rect*, color*> p) {
-        rect* r = std::get<0>(p);
-        r->update();
-        r->render(renderer, std::get<1>(p));
-    }
+    SDL_Renderer* window::getSDLRenderer() { return renderer; }
+    SDL_Window* window::getSDLWindow() { return screen; }
 
     window::~window() {
         SDL_DestroyWindow(screen);
@@ -87,7 +91,7 @@ namespace ui {
 
     void surface::update() {
         for (auto c: updateLayer) {
-            std::visit(window::get().process{}, c);
+            std::visit(process{}, c);
         }
     }
 
@@ -104,17 +108,17 @@ namespace ui {
         if (layer < 0)
             surf->updateLayer.emplace_back(this);
         else
-            surf->children.insert(surf->children.begin() + layer, this);
+            surf->updateLayer.insert(surf->updateLayer.begin() + layer, this);
     }
 
     void obj::update() {
     }
 
-    color::color(uint8_t& p_r, uint8_t& p_g, uint8_t& p_b)
+    color::color(uint8_t p_r, uint8_t p_g, uint8_t p_b)
     :r(p_r), g(p_g), b(p_b) {
         SDLColor = {r, g, b};
     }
-    color::color(uint8_t& p_r, uint8_t& p_g, uint8_t& p_b, uint8_t* p_a)
+    color::color(uint8_t p_r, uint8_t p_g, uint8_t p_b, uint8_t p_a)
     :r(p_r), g(p_g), b(p_b), a(p_a) {
         SDLColor = {r, g, b, a};
     }

@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <variant>
+#include <utility>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include "math.hpp"
@@ -11,6 +12,12 @@ namespace ui {
     class obj;
     class color;
     class rect;
+
+    struct process {
+        void operator()(surface*);
+        void operator()(obj*);
+        void operator()(std::pair<rect*, color*> p);
+    };
 
     class window {
     public:
@@ -28,19 +35,16 @@ namespace ui {
         bool running;
         bool initalized;
 
-        struct {
-            void operator()(surface*);
-            void operator()(obj*);
-            void operator()(std::pair<rect*, color*> p);
-        } process;
+        SDL_Renderer* getSDLRenderer();
+        SDL_Window* getSDLWindow();
         
         ~window();
     private:
         window() {};
         static window instance;
 
-        static SDL_Window* screen;
-        static SDL_Renderer* renderer;
+        SDL_Window* screen;
+        SDL_Renderer* renderer;
         SDL_Event event;
     };
 
@@ -56,7 +60,7 @@ namespace ui {
     private:
         SDL_Rect SDLRect;
     };
-
+    
     class surface {
     public:
         surface();
@@ -86,7 +90,8 @@ namespace ui {
 
     class color {
     public:
-        color(uint8_t& p_r, uint8_t& p_g, uint8_t& p_b);
+        color(uint8_t p_r, uint8_t p_g, uint8_t p_b);
+        color(uint8_t p_r, uint8_t p_g, uint8_t p_b, uint8_t p_a);
 
         SDL_Color* getSDLColor();
 
