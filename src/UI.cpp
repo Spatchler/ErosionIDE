@@ -1,22 +1,29 @@
 #include "UI.hpp"
 
 namespace ui {
-    window::window(const char* title, const math::vec2& size)
-    :running(true)
-    {
-        screen, renderer = NULL;
+    window window::instance;
 
-        if (SDL_Init(SDL_INIT_VIDEO) > 0)
-            std::cout << "SDL_Init failed, SDL_ERROR: " << SDL_GetError() << std::endl;
-        if (!(IMG_Init(IMG_INIT_PNG)))
-            std::cout << "IMG_Init failed, Error: " << SDL_GetError() << std::endl;
+    void window::init(const char* title, const math::vec2i& size) {
+        if (!initalized) {
+            screen, renderer = NULL;
 
-        screen = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, size.x, size.y, 0);
+            if (SDL_Init(SDL_INIT_VIDEO) > 0)
+                std::cout << "SDL_Init failed, SDL_ERROR: " << SDL_GetError() << std::endl;
+            if (!(IMG_Init(IMG_INIT_PNG)))
+                std::cout << "IMG_Init failed, Error: " << SDL_GetError() << std::endl;
 
-        if (screen == NULL)
-            std::cout << "Window init failed error:" << SDL_GetError() << std::endl;
+            screen = SDL_CreateWindow(title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, size.x, size.y, 0);
 
-        renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_ACCELERATED);
+            if (screen == NULL)
+                std::cout << "Window init failed error:" << SDL_GetError() << std::endl;
+
+            renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_ACCELERATED);
+
+            initalized = true;
+            running = true;
+        }
+        else
+            std::cout << "Cannot init twice" << std::endl;
     }
 
     void window::update() {
@@ -54,28 +61,48 @@ namespace ui {
         SDL_Quit();
     }
 
-    surface::surface() 
-    :enabled(true) {
+    rect::rect(math::vec2i p_pos, math::vec2i p_size) 
+    :pos(p_pos), size(p_size) {
+        SDLRect.x = pos.x;
+        SDLRect.y = pos.y;
+        SDLRect.w = size.x;
+        SDLRect.h = size.y;
+    }
+
+    void rect::update() {
+        SDLRect.x = pos.x;
+        SDLRect.y = pos.y;
+        SDLRect.w = size.x;
+        SDLRect.h = size.y;
+    }
+
+    void rect::render(SDL_Renderer* r, color* c) {
+        SDL_SetRenderDrawColor(r, c->r, c->g, c->b, c->a);
+        SDL_RenderDrawRect(r, &SDLRect);
+    }
+
+    surface::surface()
+    :enabled(true), r(math::vec2i(0, 0), math::vec2i(0, 0)) {
     }
 
     void surface::update() {
-        for (auto c: children) {
-            std::visit(process{}, c);
+        for (auto c: updateLayer) {
+            std::visit(window::get().process{}, c);
         }
     }
 
     void surface::split(std::vector<unsigned short>& p_ratio, std::vector<surface*>& p_surfs) {
-        for (std::size_t i = 0; i < children.size(); ++i)
-            children.emplace_back(p_surfs.at(i));
+        for (std::size_t i = 0; i < updateLayer.size(); ++i)
+            updateLayer.emplace_back(p_surfs.at(i));
     }
 
     void surface::fill(unsigned char& p_r, unsigned char& p_g, unsigned char& p_b) {
     }
 
-    obj::obj(surface* p_surf, const math::vec2& p_pos, short& p_layer) 
+    obj::obj(surface* p_surf, const math::vec2i& p_pos, short& p_layer) 
     :pos(p_pos), layer(p_layer), surf(p_surf), enabled(true) {
         if (layer < 0)
-            surf->children.emplace_back(this);
+            surf->updateLayer.emplace_back(this);
         else
             surf->children.insert(surf->children.begin() + layer, this);
     }
@@ -94,25 +121,5 @@ namespace ui {
 
     SDL_Color* color::getSDLColor() {
         return &SDLColor;
-    }
-
-    rect::rect(math::vec2& p_pos, math::vec2& p_size) 
-    :pos(p_pos), size(p_size) {
-        SDLRect.x = pos.x;
-        SDLRect.y = pos.y;
-        SDLRect.w = size.x;
-        SDLRect.h = size.y;
-    }
-
-    void rect::update() {
-        SDLRect.x = pos.x;
-        SDLRect.y = pos.y;
-        SDLRect.w = size.x;
-        SDLRect.h = size.y;
-    }
-
-    void rect::render(SDL_Renderer* r, color* c) {
-        SDL_SetRenderDrawColor(r, c->r, c->g, c->b, c->a);
-        SDL_RenderDrawRect(r, &SDLRect);
     }
 }

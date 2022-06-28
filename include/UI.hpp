@@ -14,7 +14,11 @@ namespace ui {
 
     class window {
     public:
-        window(const char* title, const math::vec2& size);
+        window(const window&) = delete;
+        static window& get() {
+            return instance;
+        }
+        void init(const char* title, const math::vec2i& size);
 
         void update();
         void split(std::vector<unsigned short>& p_ratio, std::vector<surface*>& p_surfs);
@@ -22,18 +26,35 @@ namespace ui {
         std::vector<std::variant<surface*, obj*, std::pair<rect*, color*>>> updateLayer;
         std::vector<SDL_Event> events;
         bool running;
-        
-        ~window();
-    private:
-        struct process {
+        bool initalized;
+
+        struct {
             void operator()(surface*);
             void operator()(obj*);
             void operator()(std::pair<rect*, color*> p);
-        };
+        } process;
+        
+        ~window();
+    private:
+        window() {};
+        static window instance;
 
         static SDL_Window* screen;
         static SDL_Renderer* renderer;
         SDL_Event event;
+    };
+
+    class rect {
+    public:
+        rect(math::vec2i p_pos, math::vec2i p_size);
+
+        void update();
+        void render(SDL_Renderer* r, color* c);
+
+        math::vec2i pos;
+        math::vec2i size;
+    private:
+        SDL_Rect SDLRect;
     };
 
     class surface {
@@ -52,11 +73,11 @@ namespace ui {
 
     class obj {
     public:
-        obj(surface* p_surf, const math::vec2& p_pos, short& p_layer);
+        obj(surface* p_surf, const math::vec2i& p_pos, short& p_layer);
 
         void update();
 
-        math::vec2 pos;
+        math::vec2i pos;
         surface* surf;
         short layer;
         bool enabled;
@@ -72,18 +93,5 @@ namespace ui {
         uint8_t r, g, b, a;
     private:
         SDL_Color SDLColor;
-    };
-
-    class rect {
-    public:
-        rect(math::vec2& p_pos, math::vec2& p_size);
-
-        void update();
-        void render(std::variant<surface*, window*> s, color& c);
-
-        math::vec2 pos;
-        math::vec2 size;
-    private:
-        SDL_Rect SDLRect;
     };
 }
