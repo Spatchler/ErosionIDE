@@ -1,4 +1,4 @@
-#include <iostream>
+#pragma once
 
 namespace math {
     struct vec2i {

@@ -2,37 +2,20 @@
 
 using namespace math;
 
-// void init() {
-//     auto& window = ui::window::get();
-//     window.init("Erosion IDE - vALPHA", vec2i(1280, 720));
+static auto& window = ui::window::get();
+static ui::surface mainWorkspace, fileExplorer;
 
-//     ui::surface mainWorkspace, fileExplorer;
-
-//     // window.split({1, 6}, {&fileExplorer, &mainWorkspace});
-
-//     ui::rect r(vec2i(), vec2i(500, 500));
-//     ui::color c(255, 255, 255);
-//     window.updateLayer.emplace_back(std::make_pair(&r, &c));
-// }
-
-// void update() {
-// }
-
-int main(int argc, char* args[]) {
-    auto& window = ui::window::get();
+void init() {
     window.init("Erosion IDE - vALPHA", vec2i(1280, 720));
+    ui::color fileExplorerBGcolor(33, 37, 43);
+    ui::color mainWorkspaceBGcolor(40, 44, 52);
+    mainWorkspace.bgColor = mainWorkspaceBGcolor;
+    fileExplorer.bgColor = fileExplorerBGcolor;
+    window.split({1, 6}, ui::X, {&fileExplorer, &mainWorkspace});
+}
 
-    ui::surface mainWorkspace, fileExplorer;
+void update() {
+}
 
-    // window.split({1, 6}, {&fileExplorer, &mainWorkspace});
-
-    ui::rect r(vec2i(), vec2i(10, 10));
-    ui::color c(255, 200, 0);
-    window.updateLayer.emplace_back(std::make_pair(&r, &c));
-
-    while (window.running) {
-        window.update();
-    }
-
-    return 0;
+void destroy() {
 }

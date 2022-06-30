@@ -1,2 +1,2 @@
 # ErosionIDE
-A little code editor project i am working on.
+A little code editor and ui engine project i am working on.

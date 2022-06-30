@@ -1,11 +1,16 @@
 #pragma once
 #include <iostream>
 #include <vector>
+#include <numeric>
 #include <variant>
 #include <utility>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include "math.hpp"
+
+void init();
+void update();
+void destroy();
 
 namespace ui {
     class surface;
@@ -19,21 +24,24 @@ namespace ui {
         void operator()(std::pair<rect*, color*> p);
     };
 
+    enum axis: unsigned char {
+        X, Y
+    };
+
     class window {
     public:
         window(const window&) = delete;
         static window& get() {
             return instance;
         }
-        void init(const char* title, const math::vec2i& size);
+        void init(const char* p_title, const math::vec2i& p_size);
 
         void update();
-        void split(std::vector<unsigned short>& p_ratio, std::vector<surface*>& p_surfs);
+        void split(std::vector<unsigned char> p_ratio, axis p_axis, std::vector<surface*> p_surfs);
 
         std::vector<std::variant<surface*, obj*, std::pair<rect*, color*>>> updateLayer;
         std::vector<SDL_Event> events;
-        bool running;
-        bool initalized;
+        bool running, initalized;
 
         SDL_Renderer* getSDLRenderer();
         SDL_Window* getSDLWindow();
@@ -42,10 +50,23 @@ namespace ui {
     private:
         window() {};
         static window instance;
+        math::vec2i size;
 
         SDL_Window* screen;
         SDL_Renderer* renderer;
         SDL_Event event;
+    };
+
+    class color {
+    public:
+        color(uint8_t p_r, uint8_t p_g, uint8_t p_b);
+        color(uint8_t p_r, uint8_t p_g, uint8_t p_b, uint8_t p_a);
+
+        SDL_Color* getSDLColor();
+
+        uint8_t r, g, b, a;
+    private:
+        SDL_Color SDLColor;
     };
 
     class rect {
@@ -54,6 +75,8 @@ namespace ui {
 
         void update();
         void render(SDL_Renderer* r, color* c);
+
+        SDL_Rect* getSDLRect();
 
         math::vec2i pos;
         math::vec2i size;
@@ -66,11 +89,14 @@ namespace ui {
         surface();
 
         void update();
-        void split(std::vector<unsigned short>& p_ratio, std::vector<surface*>& p_surfs);
-        void fill(unsigned char& p_r, unsigned char& p_g, unsigned char& p_b);
+        void split(std::vector<unsigned char> p_ratio, axis p_axis, std::vector<surface*> p_surfs);
+        void fill(color c);
 
         std::vector<std::variant<surface*, obj*, std::pair<rect*, color*>>> updateLayer;
         bool enabled;
+        math::vec2i size;
+        math::vec2i pos;
+        color bgColor;
         rect r;
     private:
     };
@@ -86,17 +112,5 @@ namespace ui {
         short layer;
         bool enabled;
     private:
-    };
-
-    class color {
-    public:
-        color(uint8_t p_r, uint8_t p_g, uint8_t p_b);
-        color(uint8_t p_r, uint8_t p_g, uint8_t p_b, uint8_t p_a);
-
-        SDL_Color* getSDLColor();
-
-        uint8_t r, g, b, a;
-    private:
-        SDL_Color SDLColor;
     };
 }
