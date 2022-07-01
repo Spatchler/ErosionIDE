@@ -70,14 +70,14 @@ namespace ui {
         for (std::size_t i = 0; i < p_surfs.size(); ++i) {
             surface* currentSurf = p_surfs.at(i);
             if (p_axis == X) {
-                currentSurf->size = math::vec2i((size.x / std::accumulate(p_ratio.begin(), p_ratio.end(), 0)) * p_ratio.at(i), size.y);
+                currentSurf->size = math::vec2i(std::ceil(size.x / (float)std::accumulate(p_ratio.begin(), p_ratio.end(), 0)) * p_ratio.at(i), size.y);
                 if (i > 0) {
                     surface* prevSurf = p_surfs.at(i - 1);
                     currentSurf->pos.x = prevSurf->pos.x + prevSurf->size.x;
                 }
             }
             else {
-                currentSurf->size = math::vec2i(size.x, (size.y / std::accumulate(p_ratio.begin(), p_ratio.end(), 0)) * p_ratio.at(i));
+                currentSurf->size = math::vec2i(size.x, std::ceil(size.y / (float)std::accumulate(p_ratio.begin(), p_ratio.end(), 0)) * p_ratio.at(i));
                 if (i > 0) {
                     surface* prevSurf = p_surfs.at(i - 1);
                     currentSurf->pos.y = prevSurf->pos.y + prevSurf->size.y;
@@ -132,8 +132,8 @@ namespace ui {
         r.size = size;
         r.pos = pos;
         r.render(window::get().getSDLRenderer(), &bgColor);
-        std::cout << "size: " << r.size.x << "," << r.size.y << "\n";
-        std::cout << "pos: " << r.pos.x << "," << r.pos.y << "\n";
+        //std::cout << "size: " << r.size.x << "," << r.size.y << "\n";
+        //std::cout << "pos: " << r.pos.x << "," << r.pos.y << "\n";
         for (auto c: updateLayer) {
             std::visit(process{}, c);
         }

@@ -11,7 +11,7 @@ void init() {
     ui::color mainWorkspaceBGcolor(40, 44, 52);
     mainWorkspace.bgColor = mainWorkspaceBGcolor;
     fileExplorer.bgColor = fileExplorerBGcolor;
-    window.split({1, 6}, ui::X, {&fileExplorer, &mainWorkspace});
+    window.split({1, 5}, ui::X, {&fileExplorer, &mainWorkspace});
 }
 
 void update() {
