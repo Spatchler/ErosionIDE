@@ -67,14 +67,17 @@ namespace ui {
     }
 
     void window::split(std::vector<unsigned char> p_ratio, axis p_axis, std::vector<surface*> p_surfs) {
+        int move = 0;
         for (std::size_t i = 0; i < p_surfs.size(); ++i) {
             surface* currentSurf = p_surfs.at(i);
             if (p_axis == X) {
                 currentSurf->size = math::vec2i(std::ceil(size.x / (float)std::accumulate(p_ratio.begin(), p_ratio.end(), 0)) * p_ratio.at(i), size.y);
-                if (i > 0) {
-                    surface* prevSurf = p_surfs.at(i - 1);
-                    currentSurf->pos.x = prevSurf->pos.x + prevSurf->size.x;
-                }
+                // if (i > 0) {
+                //     surface* prevSurf = p_surfs.at(i - 1);
+                //     currentSurf->pos.x = prevSurf->pos.x + prevSurf->size.x;
+                // }
+                currentSurf->pos.x = move;
+                move = currentSurf->pos.x + currentSurf->size.x;
             }
             else {
                 currentSurf->size = math::vec2i(size.x, std::ceil(size.y / (float)std::accumulate(p_ratio.begin(), p_ratio.end(), 0)) * p_ratio.at(i));
