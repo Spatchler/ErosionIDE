@@ -4,6 +4,11 @@
 #include <numeric>
 #include <variant>
 #include <utility>
+#include <unordered_map>
+#include <algorithm>
+#include <functional>
+#include <tuple>
+#include <string>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 #include "math.hpp"
@@ -17,16 +22,26 @@ namespace ui {
     class obj;
     class color;
     class rect;
+    class hotkey;
 
-    struct process {
+    struct renderProcess {
+        void operator()(surface*);
+        void operator()(obj*);
+        void operator()(std::pair<rect*, color*> p);
+    };
+    struct updateProcess {
         void operator()(surface*);
         void operator()(obj*);
         void operator()(std::pair<rect*, color*> p);
     };
 
-    enum axis: unsigned char {
+    enum axis: uint8_t {
         X, Y
     };
+
+    // class key {
+    //     key(char k);
+    // }
 
     class window {
     public:
@@ -36,12 +51,12 @@ namespace ui {
         }
         void init(const char* p_title, const math::vec2i& p_size);
 
+        void render();
         void update();
-        void split(std::vector<unsigned char> p_ratio, axis p_axis, std::vector<surface*> p_surfs);
+        void split(std::vector<uint8_t> p_ratio, axis p_axis, std::vector<surface*> p_surfs);
 
-        std::vector<std::variant<surface*, obj*, std::pair<rect*, color*>>> updateLayer;
-        std::vector<SDL_Event> events;
-        bool running, initalized;
+        std::vector<std::variant<surface*, obj*, std::pair<rect*, color*>>> layer;
+        bool running, initalized, renderState;
 
         SDL_Renderer* getSDLRenderer();
         SDL_Window* getSDLWindow();
@@ -54,11 +69,31 @@ namespace ui {
 
         SDL_Window* screen;
         SDL_Renderer* renderer;
+    };
+
+    class eventHandler {
+    public:
+        eventHandler(const eventHandler&) = delete;
+        static eventHandler& get() {
+            return instance;
+        }
+
+        void addHotkey(std::string h, const std::function<void()>& f);
+        void update();
+
+        bool keys[332];
+        std::vector<uint32_t> keyBuffer;
+    private:
+        eventHandler() {};
+        static eventHandler instance;
         SDL_Event event;
+        std::vector<std::pair<std::function<void()>, bool>> hotkeys;
+        std::unordered_map<std::string, uint8_t> hotkeySearch;
     };
 
     class color {
     public:
+        color() {}
         color(uint8_t p_r, uint8_t p_g, uint8_t p_b);
         color(uint8_t p_r, uint8_t p_g, uint8_t p_b, uint8_t p_a);
 
@@ -74,7 +109,7 @@ namespace ui {
         rect(math::vec2i p_pos, math::vec2i p_size);
 
         void update();
-        void render(SDL_Renderer* r, color* c);
+        void render(color* c);
 
         SDL_Rect* getSDLRect();
 
@@ -88,11 +123,11 @@ namespace ui {
     public:
         surface();
 
+        void render();
         void update();
-        void split(std::vector<unsigned char> p_ratio, axis p_axis, std::vector<surface*> p_surfs);
-        void fill(color c);
+        void split(std::vector<uint8_t> p_ratio, axis p_axis, std::vector<surface*> p_surfs);
 
-        std::vector<std::variant<surface*, obj*, std::pair<rect*, color*>>> updateLayer;
+        std::vector<std::variant<surface*, obj*, std::pair<rect*, color*>>> layer;
         bool enabled;
         math::vec2i size;
         math::vec2i pos;
@@ -105,6 +140,7 @@ namespace ui {
     public:
         obj(surface* p_surf, const math::vec2i& p_pos, short& p_layer);
 
+        void render();
         void update();
 
         math::vec2i pos;
