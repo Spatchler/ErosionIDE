@@ -24,6 +24,7 @@ namespace ui {
     class rect;
     class hotkey;
 
+    //visitors
     struct renderProcess {
         void operator()(surface*);
         void operator()(obj*);
@@ -35,27 +36,20 @@ namespace ui {
         void operator()(std::pair<rect*, color*> p);
     };
 
-    enum axis: uint8_t {
-        X, Y
-    };
-
-    // class key {
-    //     key(char k);
-    // }
+    enum h : uint8_t { h ,b};
 
     class window {
     public:
         window(const window&) = delete;
-        static window& get() {
-            return instance;
-        }
+        static window& get() { return instance; }
         void init(const char* p_title, const math::vec2i& p_size);
 
         void render();
         void update();
-        void split(std::vector<uint8_t> p_ratio, axis p_axis, std::vector<surface*> p_surfs);
+        void split(std::vector<uint8_t> p_ratio, math::axis p_axis, std::vector<surface*> p_surfs);
 
-        std::vector<std::variant<surface*, obj*, std::pair<rect*, color*>>> layer;
+        std::vector<std::pair<std::vector<uint8_t>, math::axis>> splits;
+        std::vector<std::variant<surface*, obj*>> layer;
         bool running, initalized, renderState;
 
         SDL_Renderer* getSDLRenderer();
@@ -74,9 +68,7 @@ namespace ui {
     class eventHandler {
     public:
         eventHandler(const eventHandler&) = delete;
-        static eventHandler& get() {
-            return instance;
-        }
+        static eventHandler& get() { return instance; }
 
         void addHotkey(std::string h, const std::function<void()>& f);
         void update();
@@ -87,8 +79,10 @@ namespace ui {
         eventHandler() {};
         static eventHandler instance;
         SDL_Event event;
-        std::vector<std::pair<std::function<void()>, bool>> hotkeys;
-        std::unordered_map<std::string, uint8_t> hotkeySearch;
+        std::vector<std::pair<std::function<void()>, bool>> ctrlHotkeys;
+        std::unordered_map<std::string, uint8_t> ctrlHotkeySearch;
+        std::vector<std::pair<std::function<void()>, bool>> altHotkeys;
+        std::unordered_map<std::string, uint8_t> altHotkeySearch;
     };
 
     class color {
@@ -113,6 +107,7 @@ namespace ui {
 
         SDL_Rect* getSDLRect();
 
+        bool filled;
         math::vec2i pos;
         math::vec2i size;
     private:
@@ -125,9 +120,10 @@ namespace ui {
 
         void render();
         void update();
-        void split(std::vector<uint8_t> p_ratio, axis p_axis, std::vector<surface*> p_surfs);
+        void split(std::vector<uint8_t> p_ratio, math::axis p_axis, std::vector<surface*> p_surfs);
 
-        std::vector<std::variant<surface*, obj*, std::pair<rect*, color*>>> layer;
+        std::vector<std::pair<std::vector<uint8_t>, math::axis>> splits;
+        std::vector<std::variant<surface*, obj*>> layer;
         bool enabled;
         math::vec2i size;
         math::vec2i pos;

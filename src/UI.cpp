@@ -30,18 +30,12 @@ namespace ui {
     void renderProcess::operator()(obj* o) {
         o->render();
     }
-    void renderProcess::operator()(std::pair<rect*, color*> p) {
-        std::get<0>(p)->render(std::get<1>(p));
-    }
 
     void updateProcess::operator()(surface* s) {
         s->update();
     }
     void updateProcess::operator()(obj* o) {
         o->update();
-    }
-    void updateProcess::operator()(std::pair<rect*, color*> p) {
-        std::get<0>(p)->update();
     }
 
     void window::init(const char* p_title, const math::vec2i& p_size) {
@@ -53,7 +47,7 @@ namespace ui {
             if (!(IMG_Init(IMG_INIT_PNG)))
                 std::cout << "IMG_Init failed, Error: " << SDL_GetError() << std::endl;
 
-            screen = SDL_CreateWindow(p_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, p_size.x, p_size.y, 0);
+            screen = SDL_CreateWindow(p_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, p_size.x, p_size.y, SDL_WINDOW_RESIZABLE);
 
             if (screen == NULL)
                 std::cout << "Window init failed error:" << SDL_GetError() << std::endl;
@@ -85,11 +79,11 @@ namespace ui {
             std::visit(updateProcess{}, c);
     }
 
-    void window::split(std::vector<uint8_t> p_ratio, axis p_axis, std::vector<surface*> p_surfs) {
+    void window::split(std::vector<uint8_t> p_ratio, math::axis p_axis, std::vector<surface*> p_surfs) {
         int move = 0;
         for (std::size_t i = 0; i < p_surfs.size(); ++i) {
-            surface* currentSurf = p_surfs.at(i);
-            if (p_axis == X) {
+            auto currentSurf = p_surfs.at(i);
+            if (p_axis == math::AxisX) {
                 currentSurf->size = math::vec2i(std::ceil(size.x / (float)std::accumulate(p_ratio.begin(), p_ratio.end(), 0)) * p_ratio.at(i), size.y);
                 currentSurf->pos.x = move;
                 move = currentSurf->pos.x + currentSurf->size.x;
@@ -99,6 +93,7 @@ namespace ui {
                 currentSurf->pos.y = move;
                 move = currentSurf->pos.y + currentSurf->size.y;
             }
+            splits.emplace_back(std::make_pair(p_ratio, p_axis));
             layer.emplace_back(currentSurf);
         }
     }
@@ -112,14 +107,27 @@ namespace ui {
     }
 
     void eventHandler::addHotkey(std::string h, const std::function<void()>& f) {
-        hotkeys.emplace_back(std::make_pair(f, false));
-        hotkeySearch.insert({h, hotkeys.size() - 1});
+        if (h.at(0) == 'A') {
+            altHotkeys.emplace_back(std::make_pair(f, false));
+            h.erase(0, 1);
+            altHotkeySearch.insert({h, altHotkeys.size() - 1});
+        }
+        else {
+            ctrlHotkeys.emplace_back(std::make_pair(f, false));
+            h.erase(0, 1);
+            ctrlHotkeySearch.insert({h, ctrlHotkeys.size() - 1});
+        }
     }
 
     void eventHandler::update() {
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT)
                 window::get().running = false;
+            if (event.type == SDL_WINDOWEVENT) {
+                if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                    std::cout << "Window Resized!" << "\n";
+                }
+            }
             if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
                 std::cout << event.key.keysym.sym << "\n";
                 keyBuffer.push_back(event.key.keysym.sym);
@@ -137,23 +145,47 @@ namespace ui {
                 // }
             }
             if (event.type == SDL_KEYUP && event.key.repeat == 0) {
-                for (auto& k: hotkeySearch) {
+                for (auto& k: ctrlHotkeySearch) {
                     if (event.key.keysym.sym == k.first.at(0))
-                        hotkeys.at(k.second).second = false;
+                        ctrlHotkeys.at(k.second).second = false;
+                }
+                for (auto& k: altHotkeySearch) {
+                    if (event.key.keysym.sym == k.first.at(0)) {
+                        altHotkeys.at(k.second).second = false;
+                    }
                 }
                 keyBuffer.erase(std::find(keyBuffer.begin(), keyBuffer.end(), event.key.keysym.sym));
             }
         }
+        //ctrl hotkey checks
         if (keyBuffer.size() > 1 && keyBuffer.at(0) == SDLK_LCTRL || keyBuffer.size() > 1 && keyBuffer.at(0) == SDLK_RCTRL) {
             int i = 1;
-            for (auto& k: hotkeySearch) {
+            for (auto& k: ctrlHotkeySearch) {
                 i = 1;
                 for (auto& c: k.first) {
                     if (keyBuffer.size() >= i) {
                         if (keyBuffer.at(i) == c) {
-                            if (!hotkeys.at(k.second).second) {
-                                hotkeys.at(k.second).first();
-                                hotkeys.at(k.second).second = true;
+                            if (!ctrlHotkeys.at(k.second).second) {
+                                ctrlHotkeys.at(k.second).first();
+                                ctrlHotkeys.at(k.second).second = true;
+                            }
+                        }
+                    }
+                    ++i;
+                }
+            }
+        }
+        //alt hotkey checks
+        if (keyBuffer.size() > 1 && keyBuffer.at(0) == SDLK_LALT) {
+            int i = 1;
+            for (auto& k: altHotkeySearch) {
+                i = 1;
+                for (auto& c: k.first) {
+                    if (keyBuffer.size() >= i) {
+                        if (keyBuffer.at(i) == c) {
+                            if (!altHotkeys.at(k.second).second) {
+                                altHotkeys.at(k.second).first();
+                                altHotkeys.at(k.second).second = true;
                             }
                         }
                     }
@@ -164,7 +196,7 @@ namespace ui {
     }
 
     rect::rect(math::vec2i p_pos, math::vec2i p_size) 
-    :pos(p_pos), size(p_size) {
+    :filled(true), pos(p_pos), size(p_size) {
         SDLRect.x = pos.x;
         SDLRect.y = pos.y;
         SDLRect.w = size.x;
@@ -184,7 +216,10 @@ namespace ui {
         SDLRect.w = size.x;
         SDLRect.h = size.y;
         SDL_SetRenderDrawColor(window::get().getSDLRenderer(), c->r, c->g, c->b, c->a);
-        SDL_RenderFillRect(window::get().getSDLRenderer(), &SDLRect);
+        if (filled)
+            SDL_RenderFillRect(window::get().getSDLRenderer(), &SDLRect);
+        else
+            SDL_RenderDrawRect(window::get().getSDLRenderer(), &SDLRect);
         SDL_SetRenderDrawColor(window::get().getSDLRenderer(), 0, 0, 0, 255);
     }
 
@@ -211,11 +246,11 @@ namespace ui {
             std::visit(updateProcess{}, c);
     }
 
-    void surface::split(std::vector<uint8_t> p_ratio, axis p_axis, std::vector<surface*> p_surfs) {
+    void surface::split(std::vector<uint8_t> p_ratio, math::axis p_axis, std::vector<surface*> p_surfs) {
         int move = 0;
         for (std::size_t i = 0; i < p_surfs.size(); ++i) {
             surface* currentSurf = p_surfs.at(i);
-            if (p_axis == X) {
+            if (p_axis == math::AxisX) {
                 currentSurf->size = math::vec2i(std::ceil(size.x / (float)std::accumulate(p_ratio.begin(), p_ratio.end(), 0)) * p_ratio.at(i), size.y);
                 currentSurf->pos.x = move;
                 move = currentSurf->pos.x + currentSurf->size.x;
@@ -225,6 +260,7 @@ namespace ui {
                 currentSurf->pos.y = move;
                 move = currentSurf->pos.y + currentSurf->size.y;
             }
+            splits.emplace_back(std::make_pair(p_ratio, p_axis));
             layer.emplace_back(currentSurf);
         }
     }

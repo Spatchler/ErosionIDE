@@ -23,65 +23,43 @@ void init() {
     //main workspace
     mainWorkspace.bgColor = pallete["grey"];
 
-    /*  add file explorer resize hotkey "Ctrl + Alt + (hjkl)"
-        all hotkeys start with "Ctrl"                    */
-    //resize hotkeys
-    //left
-    eventHandler.addHotkey("h", [](){
-        mainWorkspace.size.x -= 10;
-        ui::window::get().renderState = true;
-    });
-    //right
-    eventHandler.addHotkey("l", [](){
-        mainWorkspace.size.x += 10;
-        ui::window::get().renderState = true;
-    });
-    //up
-    eventHandler.addHotkey("k", [](){
-        mainWorkspace.size.y -= 10;
-        ui::window::get().renderState = true;
-    });
-    //down
-    eventHandler.addHotkey("j", [](){
-        mainWorkspace.size.y += 10;
-        ui::window::get().renderState = true;
-    });
-
     //file explorer
     fileExplorer.bgColor = pallete["dark grey"];
 
-    /*  add file explorer show and hide hotkey "Ctrl + F"
-        add file explorer resize hotkey "Ctrl + Alt + (hjkl)"
-        all hotkeys start with "Ctrl"                    */
-    eventHandler.addHotkey("f", [](){
+    /*  add current surface show and hide hotkey "Alt + f"
+        add current surface resize hotkey "Alt + (hjkl)"
+        A for Alt, S for Shift, C for control
+        hotkeys can only start with control or alt        */
+
+    //show hide hotkey
+    eventHandler.addHotkey("Af", [](){
         fileExplorer.enabled = !fileExplorer.enabled;
         ui::window::get().renderState = true;
     });
-
     //resize hotkeys
     //left
-    eventHandler.addHotkey("h", [](){
+    eventHandler.addHotkey("Ah", [](){
         fileExplorer.size.x -= 10;
         ui::window::get().renderState = true;
     });
     //right
-    eventHandler.addHotkey("l", [](){
+    eventHandler.addHotkey("Al", [](){
         fileExplorer.size.x += 10;
         ui::window::get().renderState = true;
     });
     //up
-    eventHandler.addHotkey("k", [](){
+    eventHandler.addHotkey("Ak", [](){
         fileExplorer.size.y -= 10;
         ui::window::get().renderState = true;
     });
     //down
-    eventHandler.addHotkey("j", [](){
+    eventHandler.addHotkey("Aj", [](){
         fileExplorer.size.y += 10;
         ui::window::get().renderState = true;
     });
 
     //split window
-    window.split({1, 4}, ui::X, {&fileExplorer, &mainWorkspace});
+    window.split({1, 4}, AxisX, {&fileExplorer, &mainWorkspace});
 }
 //update function called every update "50hz"
 void update() {
