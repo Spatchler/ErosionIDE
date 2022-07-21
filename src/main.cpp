@@ -26,38 +26,6 @@ void init() {
     //file explorer
     fileExplorer.bgColor = pallete["dark grey"];
 
-    /*  add current surface show and hide hotkey "Alt + f"
-        add current surface resize hotkey "Alt + (hjkl)"
-        A for Alt, S for Shift, C for control
-        hotkeys can only start with control or alt        */
-
-    //show hide hotkey
-    eventHandler.addHotkey("Af", [](){
-        fileExplorer.enabled = !fileExplorer.enabled;
-        ui::window::get().renderState = true;
-    });
-    //resize hotkeys
-    //left
-    eventHandler.addHotkey("Ah", [](){
-        fileExplorer.size.x -= 10;
-        ui::window::get().renderState = true;
-    });
-    //right
-    eventHandler.addHotkey("Al", [](){
-        fileExplorer.size.x += 10;
-        ui::window::get().renderState = true;
-    });
-    //up
-    eventHandler.addHotkey("Ak", [](){
-        fileExplorer.size.y -= 10;
-        ui::window::get().renderState = true;
-    });
-    //down
-    eventHandler.addHotkey("Aj", [](){
-        fileExplorer.size.y += 10;
-        ui::window::get().renderState = true;
-    });
-
     //split window
     window.split({1, 4}, AxisX, {&fileExplorer, &mainWorkspace});
 }

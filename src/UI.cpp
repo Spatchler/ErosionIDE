@@ -6,7 +6,8 @@ int main(int argc, char* args[]) {
     init();
     while (ui::window::get().running) {
         startTime = SDL_GetTicks();
-        ui::window::get().update();
+        if (ui::window::get().updateState)
+            ui::window::get().update();
         ui::eventHandler::get().update();
         update();
         if (ui::window::get().renderState)
@@ -65,9 +66,31 @@ namespace ui {
     void window::render() {
         //clear
         SDL_RenderClear(renderer);
+        //rescale window contents
+        if (eventHandler::get().resize || updateSizes) {
+            if (updateSizes) {
+                updateSizes = false;
+            }
+            eventHandler::get().resize = false;
+            SDL_GetWindowSize(screen, &size.x, &size.y);
+            int move = 0;
+            for (std::size_t i = 0; i < layer.size(); ++i) {
+                surface* currentSurf = layer.at(i);
+                if (splitAxis == math::AxisX) {
+                    currentSurf->size = math::vec2i(std::ceil(size.x / (float)std::accumulate(splitRatio.begin(), splitRatio.end(), 0)) * splitRatio.at(i), size.y);
+                    currentSurf->pos.x = move;
+                    move = currentSurf->pos.x + currentSurf->size.x;
+                }
+                else {
+                    currentSurf->size = math::vec2i(size.x, std::ceil(size.y / (float)std::accumulate(splitRatio.begin(), splitRatio.end(), 0)) * splitRatio.at(i));
+                    currentSurf->pos.y = move;
+                    move = currentSurf->pos.y + currentSurf->size.y;
+                }
+            }
+        }
         //update
         for (auto c: layer)
-            std::visit(renderProcess{}, c);
+            c->render();
         //render
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderPresent(renderer);
@@ -76,26 +99,40 @@ namespace ui {
     void window::update() {
         //update
         for (auto c: layer)
-            std::visit(updateProcess{}, c);
+            c->update();
     }
 
     void window::split(std::vector<uint8_t> p_ratio, math::axis p_axis, std::vector<surface*> p_surfs) {
+        splitAxis = p_axis;
+        splitRatio = p_ratio;
+        layer = p_surfs;
         int move = 0;
-        for (std::size_t i = 0; i < p_surfs.size(); ++i) {
-            auto currentSurf = p_surfs.at(i);
-            if (p_axis == math::AxisX) {
-                currentSurf->size = math::vec2i(std::ceil(size.x / (float)std::accumulate(p_ratio.begin(), p_ratio.end(), 0)) * p_ratio.at(i), size.y);
+        for (std::size_t i = 0; i < layer.size(); ++i) {
+            surface* currentSurf = layer.at(i);
+            if (splitAxis == math::AxisX) {
+                currentSurf->size = math::vec2i(std::ceil(size.x / (float)std::accumulate(splitRatio.begin(), splitRatio.end(), 0)) * splitRatio.at(i), size.y);
                 currentSurf->pos.x = move;
                 move = currentSurf->pos.x + currentSurf->size.x;
             }
             else {
-                currentSurf->size = math::vec2i(size.x, std::ceil(size.y / (float)std::accumulate(p_ratio.begin(), p_ratio.end(), 0)) * p_ratio.at(i));
+                currentSurf->size = math::vec2i(size.x, std::ceil(size.y / (float)std::accumulate(splitRatio.begin(), splitRatio.end(), 0)) * splitRatio.at(i));
                 currentSurf->pos.y = move;
                 move = currentSurf->pos.y + currentSurf->size.y;
             }
-            splits.emplace_back(std::make_pair(p_ratio, p_axis));
-            layer.emplace_back(currentSurf);
         }
+    }
+    
+    void window::mvFocus(char v) {
+        focusPos.first += v;
+        focusPos.first = (layer.size() + (focusPos.first % layer.size())) % layer.size();
+    }
+    void window::mvCurrentSurf(char v) {
+        std::cout << "mvCurrentSurf: " << (int)focusPos.first << ", " << layer.size() << "\n";
+        std::iter_swap(layer.begin() + focusPos.first, layer.begin() + (focusPos.first - v));
+    }
+    void window::resizeCurrentSurf(char v) {
+        std::cout << "resizeCurrentSurf: " << (int)focusPos.first << ", " << layer.size() << "\n";
+        *layer.at(focusPos.first)->size.getAxis(splitAxis) += v;
     }
 
     SDL_Renderer* window::getSDLRenderer() { return renderer; }
@@ -125,8 +162,15 @@ namespace ui {
                 window::get().running = false;
             if (event.type == SDL_WINDOWEVENT) {
                 if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
-                    std::cout << "Window Resized!" << "\n";
+                    resize = true;
+                    window::get().renderState = true;
                 }
+                if (event.window.event == SDL_WINDOWEVENT_SHOWN)
+                    window::get().renderState = true;
+                if (event.window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
+                    window::get().updateState = true;
+                if (event.window.event == SDL_WINDOWEVENT_FOCUS_LOST)
+                    window::get().updateState = false;
             }
             if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
                 std::cout << event.key.keysym.sym << "\n";
@@ -146,50 +190,86 @@ namespace ui {
             }
             if (event.type == SDL_KEYUP && event.key.repeat == 0) {
                 for (auto& k: ctrlHotkeySearch) {
-                    if (event.key.keysym.sym == k.first.at(0))
+                    if (event.key.keysym.sym == k.first.at(k.first.size() - 1))
                         ctrlHotkeys.at(k.second).second = false;
                 }
                 for (auto& k: altHotkeySearch) {
-                    if (event.key.keysym.sym == k.first.at(0)) {
+                    if (event.key.keysym.sym == k.first.at(k.first.size() - 1))
                         altHotkeys.at(k.second).second = false;
-                    }
                 }
                 keyBuffer.erase(std::find(keyBuffer.begin(), keyBuffer.end(), event.key.keysym.sym));
             }
         }
+        //propiatery hotkeys for window
+        if (keyBuffer.size() > 1 && keyBuffer.at(0) == SDLK_LALT) {
+            //alt keybinds
+            //show hide current surface
+            if (keyBuffer.at(1) == SDLK_f)
+                window::get().currentSurf->enabled = !window::get().currentSurf->enabled;
+            //cycle current surface focus forward
+            if (keyBuffer.at(1) == SDLK_k)
+                window::get().mvFocus(1);
+            //cycle current surface focus backward
+            if (keyBuffer.at(1) == SDLK_j)
+                window::get().mvFocus(-1);
+            if (keyBuffer.size() > 2 && (keyBuffer.at(1) == SDLK_LCTRL || keyBuffer.at(1) == SDLK_RCTRL)) {
+                //alt ctrl keybinds
+                //move current surface forward
+                if (keyBuffer.at(2) == SDLK_k)
+                    window::get().mvCurrentSurf(1);
+                //move current surface backward
+                if (keyBuffer.at(2) == SDLK_j)
+                    window::get().mvCurrentSurf(-1);
+            }
+            if (keyBuffer.size() > 2 && (keyBuffer.at(1) == SDLK_LSHIFT || keyBuffer.at(1) == SDLK_RSHIFT)) {
+                //alt shift keybinds
+                //increase currfent surface size
+                if (keyBuffer.at(2) == SDLK_k)
+                    window::get().resizeCurrentSurf(10);
+                //decrease currfent surface size
+                if (keyBuffer.at(2) == SDLK_j)
+                    window::get().resizeCurrentSurf(-10);
+            }
+        }
         //ctrl hotkey checks
         if (keyBuffer.size() > 1 && keyBuffer.at(0) == SDLK_LCTRL || keyBuffer.size() > 1 && keyBuffer.at(0) == SDLK_RCTRL) {
-            int i = 1;
             for (auto& k: ctrlHotkeySearch) {
-                i = 1;
-                for (auto& c: k.first) {
-                    if (keyBuffer.size() >= i) {
-                        if (keyBuffer.at(i) == c) {
-                            if (!ctrlHotkeys.at(k.second).second) {
-                                ctrlHotkeys.at(k.second).first();
-                                ctrlHotkeys.at(k.second).second = true;
-                            }
+                if (k.first.size() == 1) {
+                    if (keyBuffer.at(1) == k.first.at(0)) {
+                        if (!ctrlHotkeys.at(k.second).second) {
+                            ctrlHotkeys.at(k.second).first();
+                            ctrlHotkeys.at(k.second).second = true;
                         }
                     }
-                    ++i;
+                }
+                else if ((keyBuffer.at(1) == SDLK_LSHIFT || keyBuffer.at(1) == SDLK_RSHIFT) && keyBuffer.size() == 3) {
+                    if (keyBuffer.at(2) == k.first.at(1)) {
+                        if (!ctrlHotkeys.at(k.second).second) {
+                            ctrlHotkeys.at(k.second).first();
+                            ctrlHotkeys.at(k.second).second = true;
+                        }
+                    }
                 }
             }
         }
         //alt hotkey checks
         if (keyBuffer.size() > 1 && keyBuffer.at(0) == SDLK_LALT) {
-            int i = 1;
             for (auto& k: altHotkeySearch) {
-                i = 1;
-                for (auto& c: k.first) {
-                    if (keyBuffer.size() >= i) {
-                        if (keyBuffer.at(i) == c) {
-                            if (!altHotkeys.at(k.second).second) {
-                                altHotkeys.at(k.second).first();
-                                altHotkeys.at(k.second).second = true;
-                            }
+                if (k.first.size() == 1) {
+                    if (keyBuffer.at(1) == k.first.at(0)) {
+                        if (!altHotkeys.at(k.second).second) {
+                            altHotkeys.at(k.second).first();
+                            altHotkeys.at(k.second).second = true;
                         }
                     }
-                    ++i;
+                }
+                else if ((keyBuffer.at(1) == SDLK_LSHIFT || keyBuffer.at(1) == SDLK_RSHIFT) && keyBuffer.size() == 3) {
+                    if (keyBuffer.at(2) == k.first.at(1)) {
+                        if (!altHotkeys.at(k.second).second) {
+                            altHotkeys.at(k.second).first();
+                            altHotkeys.at(k.second).second = true;
+                        }
+                    }
                 }
             }
         }

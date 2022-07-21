@@ -36,8 +36,6 @@ namespace ui {
         void operator()(std::pair<rect*, color*> p);
     };
 
-    enum h : uint8_t { h ,b};
-
     class window {
     public:
         window(const window&) = delete;
@@ -48,9 +46,15 @@ namespace ui {
         void update();
         void split(std::vector<uint8_t> p_ratio, math::axis p_axis, std::vector<surface*> p_surfs);
 
-        std::vector<std::pair<std::vector<uint8_t>, math::axis>> splits;
-        std::vector<std::variant<surface*, obj*>> layer;
-        bool running, initalized, renderState;
+        void mvFocus(char v);
+        void mvCurrentSurf(char v);
+        void resizeCurrentSurf(char v);
+
+        math::axis splitAxis;
+        std::vector<uint8_t> splitRatio;
+        std::vector<surface*> layer;
+        surface* currentSurf;
+        bool running, initalized, renderState, updateState, updateSizes;
 
         SDL_Renderer* getSDLRenderer();
         SDL_Window* getSDLWindow();
@@ -60,6 +64,8 @@ namespace ui {
         window() {};
         static window instance;
         math::vec2i size;
+
+        std::pair<char, bool> focusPos;
 
         SDL_Window* screen;
         SDL_Renderer* renderer;
@@ -75,6 +81,7 @@ namespace ui {
 
         bool keys[332];
         std::vector<uint32_t> keyBuffer;
+        bool resize;
     private:
         eventHandler() {};
         static eventHandler instance;

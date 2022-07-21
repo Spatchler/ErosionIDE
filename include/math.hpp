@@ -9,6 +9,9 @@ namespace math {
     public:
         vec2i(const int& p_x, const int& p_y);
         vec2i();
+
+        int* getAxis(axis a);
+
         int x, y;
     private:
     };

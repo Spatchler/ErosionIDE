@@ -9,4 +9,11 @@ namespace math {
         x = 0;
         y = 0;
     }
+
+    int* vec2i::getAxis(axis a) {
+        if (a == axis::AxisX)
+            return &x;
+        else
+            return &y;
+    }
 }
