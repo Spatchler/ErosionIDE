@@ -44,7 +44,7 @@ namespace ui {
 
         void render();
         void update();
-        void split(std::vector<uint8_t> p_ratio, math::axis p_axis, std::vector<surface*> p_surfs);
+        void split(std::vector<uint8_t> p_ratio, math::axis p_axis, std::vector<surface*> p_surfs, bool p_first = false);
 
         void mvFocus(char v);
         void mvCurrentSurf(char v);
@@ -52,6 +52,7 @@ namespace ui {
 
         math::axis splitAxis;
         std::vector<uint8_t> splitRatio;
+        std::vector<short> splitOffset;
         std::vector<surface*> layer;
         surface* currentSurf;
         bool running, initalized, renderState, updateState, updateSizes;

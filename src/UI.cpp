@@ -59,43 +59,6 @@ namespace ui {
             running = true;
             size = p_size;
             renderState = true;
-            
-            //default hotkeys
-            //show hide hotkey
-            eventHandler::get().addHotkey("Af", []{
-                std::cout << "show/hide" << "\n";
-                window::get().currentSurf->enabled = !window::get().currentSurf->enabled;
-            });
-            //cycle current surface focus forward
-            eventHandler::get().addHotkey("Aj", []{
-                std::cout << "move focus left" << "\n";
-                window::get().mvFocus(-1);
-            });
-            //cycle current surface focus backward
-            eventHandler::get().addHotkey("Ak", []{
-                std::cout << "move focus right" << "\n";
-                window::get().mvFocus(1);
-            });
-            //move current surface forward
-            eventHandler::get().addHotkey("ACj", []{
-                std::cout << "move left" << "\n";
-                window::get().mvCurrentSurf(-1);
-            });
-            //move current surface backward
-            eventHandler::get().addHotkey("ACk", []{
-                std::cout << "move right" << "\n";
-                window::get().mvCurrentSurf(1);
-            });
-            //increase current surface size
-            eventHandler::get().addHotkey("ASj", []{
-                std::cout << "resize left" << "\n";
-                window::get().resizeCurrentSurf(-10);
-            });
-            //decrease current surface size
-            eventHandler::get().addHotkey("ASk", []{
-                std::cout << "resize right" << "\n";
-                window::get().resizeCurrentSurf(10);
-            });
         }
         else std::cout << "Cannot init twice" << "\n";
     }
@@ -108,24 +71,11 @@ namespace ui {
             updateSizes = false;
             eventHandler::get().resize = false;
             SDL_GetWindowSize(screen, &size.x, &size.y);
-            int move = 0;
-            for (std::size_t i = 0; i < layer.size(); ++i) {
-                surface* currentSurf = layer.at(i);
-                if (splitAxis == math::AxisX) {
-                    currentSurf->size = math::vec2i(std::ceil(size.x / (float)std::accumulate(splitRatio.begin(), splitRatio.end(), 0)) * splitRatio.at(i), size.y);
-                    currentSurf->pos.x = move;
-                    move = currentSurf->pos.x + currentSurf->size.x;
-                }
-                else {
-                    currentSurf->size = math::vec2i(size.x, std::ceil(size.y / (float)std::accumulate(splitRatio.begin(), splitRatio.end(), 0)) * splitRatio.at(i));
-                    currentSurf->pos.y = move;
-                    move = currentSurf->pos.y + currentSurf->size.y;
-                }
-            }
+            this->split(splitRatio, splitAxis, layer, true);
         }
         //update
-        for (auto c: layer)
-            c->render();
+        for (surface* s: layer)
+            s->render();
         //render
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderPresent(renderer);
@@ -137,20 +87,24 @@ namespace ui {
             c->update();
     }
 
-    void window::split(std::vector<uint8_t> p_ratio, math::axis p_axis, std::vector<surface*> p_surfs) {
-        splitAxis = p_axis;
-        splitRatio = p_ratio;
-        layer = p_surfs;
+    void window::split(std::vector<uint8_t> p_ratio, math::axis p_axis, std::vector<surface*> p_surfs, bool p_first) {
+        if (!p_first) {
+            splitAxis = p_axis;
+            splitRatio = p_ratio;
+            layer = p_surfs;
+            for (uint8_t i: splitRatio)
+                splitOffset.push_back(0);
+        }
         int move = 0;
         for (std::size_t i = 0; i < layer.size(); ++i) {
             surface* currentSurf = layer.at(i);
             if (splitAxis == math::AxisX) {
-                currentSurf->size = math::vec2i(std::ceil(size.x / (float)std::accumulate(splitRatio.begin(), splitRatio.end(), 0)) * splitRatio.at(i), size.y);
+                currentSurf->size = math::vec2i(std::ceil(size.x / (float)std::accumulate(splitRatio.begin(), splitRatio.end(), 0)) * splitRatio.at(i) + splitOffset.at(i), size.y);
                 currentSurf->pos.x = move;
                 move = currentSurf->pos.x + currentSurf->size.x;
             }
             else {
-                currentSurf->size = math::vec2i(size.x, std::ceil(size.y / (float)std::accumulate(splitRatio.begin(), splitRatio.end(), 0)) * splitRatio.at(i));
+                currentSurf->size = math::vec2i(size.x, std::ceil(size.y / (float)std::accumulate(splitRatio.begin(), splitRatio.end(), 0)) * splitRatio.at(i) + splitOffset.at(i));
                 currentSurf->pos.y = move;
                 move = currentSurf->pos.y + currentSurf->size.y;
             }
@@ -164,10 +118,15 @@ namespace ui {
     }
     void window::mvCurrentSurf(char v) {
         std::iter_swap(layer.begin() + focusPos.first, layer.begin() + (layer.size() + ((focusPos.first - v) % layer.size())) % layer.size());
+        std::iter_swap(splitRatio.begin() + focusPos.first, splitRatio.begin() + (splitRatio.size() + ((focusPos.first - v) % splitRatio.size())) % splitRatio.size());
+        std::iter_swap(splitOffset.begin() + focusPos.first, splitOffset.begin() + (splitOffset.size() + ((focusPos.first - v) % splitOffset.size())) % splitOffset.size());
+        updateSizes = true;
         renderState = true;
     }
     void window::resizeCurrentSurf(char v) {
-        *layer.at(focusPos.first)->size.getAxis(splitAxis) += v;
+        splitOffset.at(focusPos.first) += v;
+        splitOffset.at((layer.size() + (focusPos.first + 1 % layer.size())) % layer.size()) -= v;
+        // *layer.at(focusPos.first)->size.getAxis(splitAxis) += v;
         updateSizes = true;
         renderState = true;
     }

@@ -19,6 +19,41 @@ static ui::surface mainWorkspace, fileExplorer;
 void init() {
     //init window
     window.init("Erosion IDE - vALPHA", vec2i(1280, 720));
+    //show hide hotkey
+    eventHandler.addHotkey("Af", []{
+        std::cout << "show/hide" << "\n";
+        window.currentSurf->enabled = !window.currentSurf->enabled;
+    });
+    //cycle current surface focus forward
+    eventHandler.addHotkey("Aj", []{
+        std::cout << "move focus left" << "\n";
+        window.mvFocus(-1);
+    });
+    //cycle current surface focus backward
+    eventHandler.addHotkey("Ak", []{
+        std::cout << "move focus right" << "\n";
+        window.mvFocus(1);
+    });
+    //move current surface forward
+    eventHandler.addHotkey("ACj", []{
+        std::cout << "move left" << "\n";
+        window.mvCurrentSurf(-1);
+    });
+    //move current surface backward
+    eventHandler.addHotkey("ACk", []{
+        std::cout << "move right" << "\n";
+        window.mvCurrentSurf(1);
+    });
+    //increase current surface size
+    eventHandler.addHotkey("ASj", []{
+        std::cout << "resize left" << "\n";
+        window.resizeCurrentSurf(-10);
+    });
+    //decrease current surface size
+    eventHandler.addHotkey("ASk", []{
+        std::cout << "resize right" << "\n";
+        window.resizeCurrentSurf(10);
+    });
 
     //main workspace
     mainWorkspace.bgColor = pallete["grey"];
