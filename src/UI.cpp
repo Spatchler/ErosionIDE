@@ -44,14 +44,14 @@ namespace ui {
             screen, renderer = NULL;
 
             if (SDL_Init(SDL_INIT_VIDEO) > 0)
-                std::cout << "SDL_Init failed, SDL_ERROR: " << SDL_GetError() << std::endl;
+                std::cout << "SDL_Init failed, SDL_ERROR: " << SDL_GetError() << "\n";
             if (!(IMG_Init(IMG_INIT_PNG)))
-                std::cout << "IMG_Init failed, Error: " << SDL_GetError() << std::endl;
+                std::cout << "IMG_Init failed, Error: " << SDL_GetError() << "\n";
 
             screen = SDL_CreateWindow(p_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, p_size.x, p_size.y, SDL_WINDOW_RESIZABLE);
 
             if (screen == NULL)
-                std::cout << "Window init failed error:" << SDL_GetError() << std::endl;
+                std::cout << "Window init failed error:" << SDL_GetError() << "\n";
 
             renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_ACCELERATED && SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
@@ -59,8 +59,45 @@ namespace ui {
             running = true;
             size = p_size;
             renderState = true;
+            
+            //default hotkeys
+            //show hide hotkey
+            eventHandler::get().addHotkey("Af", []{
+                std::cout << "show/hide" << "\n";
+                window::get().currentSurf->enabled = !window::get().currentSurf->enabled;
+            });
+            //cycle current surface focus forward
+            eventHandler::get().addHotkey("Aj", []{
+                std::cout << "move focus left" << "\n";
+                window::get().mvFocus(-1);
+            });
+            //cycle current surface focus backward
+            eventHandler::get().addHotkey("Ak", []{
+                std::cout << "move focus right" << "\n";
+                window::get().mvFocus(1);
+            });
+            //move current surface forward
+            eventHandler::get().addHotkey("ACj", []{
+                std::cout << "move left" << "\n";
+                window::get().mvCurrentSurf(-1);
+            });
+            //move current surface backward
+            eventHandler::get().addHotkey("ACk", []{
+                std::cout << "move right" << "\n";
+                window::get().mvCurrentSurf(1);
+            });
+            //increase current surface size
+            eventHandler::get().addHotkey("ASj", []{
+                std::cout << "resize left" << "\n";
+                window::get().resizeCurrentSurf(-10);
+            });
+            //decrease current surface size
+            eventHandler::get().addHotkey("ASk", []{
+                std::cout << "resize right" << "\n";
+                window::get().resizeCurrentSurf(10);
+            });
         }
-        else std::cout << "Cannot init twice" << std::endl;
+        else std::cout << "Cannot init twice" << "\n";
     }
 
     void window::render() {
@@ -68,9 +105,7 @@ namespace ui {
         SDL_RenderClear(renderer);
         //rescale window contents
         if (eventHandler::get().resize || updateSizes) {
-            if (updateSizes) {
-                updateSizes = false;
-            }
+            updateSizes = false;
             eventHandler::get().resize = false;
             SDL_GetWindowSize(screen, &size.x, &size.y);
             int move = 0;
@@ -125,14 +160,16 @@ namespace ui {
     void window::mvFocus(char v) {
         focusPos.first += v;
         focusPos.first = (layer.size() + (focusPos.first % layer.size())) % layer.size();
+        renderState = true;
     }
     void window::mvCurrentSurf(char v) {
-        std::cout << "mvCurrentSurf: " << (int)focusPos.first << ", " << layer.size() << "\n";
-        std::iter_swap(layer.begin() + focusPos.first, layer.begin() + (focusPos.first - v));
+        std::iter_swap(layer.begin() + focusPos.first, layer.begin() + (layer.size() + ((focusPos.first - v) % layer.size())) % layer.size());
+        renderState = true;
     }
     void window::resizeCurrentSurf(char v) {
-        std::cout << "resizeCurrentSurf: " << (int)focusPos.first << ", " << layer.size() << "\n";
         *layer.at(focusPos.first)->size.getAxis(splitAxis) += v;
+        updateSizes = true;
+        renderState = true;
     }
 
     SDL_Renderer* window::getSDLRenderer() { return renderer; }
@@ -144,16 +181,8 @@ namespace ui {
     }
 
     void eventHandler::addHotkey(std::string h, const std::function<void()>& f) {
-        if (h.at(0) == 'A') {
-            altHotkeys.emplace_back(std::make_pair(f, false));
-            h.erase(0, 1);
-            altHotkeySearch.insert({h, altHotkeys.size() - 1});
-        }
-        else {
-            ctrlHotkeys.emplace_back(std::make_pair(f, false));
-            h.erase(0, 1);
-            ctrlHotkeySearch.insert({h, ctrlHotkeys.size() - 1});
-        }
+        hotkeys.insert({h, f});
+        hotkeyStates.push_back(false);
     }
 
     void eventHandler::update() {
@@ -175,102 +204,65 @@ namespace ui {
             if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
                 std::cout << event.key.keysym.sym << "\n";
                 keyBuffer.push_back(event.key.keysym.sym);
-                // //letters
-                // if (key > 96 && key < 123) {
-                // }
-                // //numbers
-                // if (key > 47 && key < 58) {
-                // }
-                // //space
-                // if (key == 32) {
-                // }
-                // //enter
-                // if (key == 13) {
-                // }
+                // letters        key > 96 && key < 123
+                // numbers        key > 47 && key < 58
             }
             if (event.type == SDL_KEYUP && event.key.repeat == 0) {
-                for (auto& k: ctrlHotkeySearch) {
-                    if (event.key.keysym.sym == k.first.at(k.first.size() - 1))
-                        ctrlHotkeys.at(k.second).second = false;
+                uint32_t currentKey = event.key.keysym.sym;
+                uint8_t i = 0;
+                for (auto h: hotkeys) {
+                    if (h.first.back() == 'A' && currentKey == SDLK_LALT)
+                        hotkeyStates.at(i) == false;
+                    else if (h.first.back() == 'C' && (currentKey == SDLK_LCTRL || currentKey == SDLK_RCTRL))
+                        hotkeyStates.at(i) == false;
+                    else if (h.first.back() == 'S' && (currentKey == SDLK_LSHIFT || currentKey == SDLK_RSHIFT))
+                        hotkeyStates.at(i) == false;
+                    else if (h.first.back() == 'T' && currentKey == SDLK_TAB)
+                        hotkeyStates.at(i) == false;
+                    else if (h.first.back() == currentKey - 47)
+                        hotkeyStates.at(i) == false;
+                    else if (h.first.back() == currentKey) {
+                        hotkeyStates.at(i) = false;
+                    }
+                    ++i;
                 }
-                for (auto& k: altHotkeySearch) {
-                    if (event.key.keysym.sym == k.first.at(k.first.size() - 1))
-                        altHotkeys.at(k.second).second = false;
-                }
-                keyBuffer.erase(std::find(keyBuffer.begin(), keyBuffer.end(), event.key.keysym.sym));
+                keyBuffer.erase(std::find(keyBuffer.begin(), keyBuffer.end(), currentKey));
             }
         }
-        //propiatery hotkeys for window
-        if (keyBuffer.size() > 1 && keyBuffer.at(0) == SDLK_LALT) {
-            //alt keybinds
-            //show hide current surface
-            if (keyBuffer.at(1) == SDLK_f)
-                window::get().currentSurf->enabled = !window::get().currentSurf->enabled;
-            //cycle current surface focus forward
-            if (keyBuffer.at(1) == SDLK_k)
-                window::get().mvFocus(1);
-            //cycle current surface focus backward
-            if (keyBuffer.at(1) == SDLK_j)
-                window::get().mvFocus(-1);
-            if (keyBuffer.size() > 2 && (keyBuffer.at(1) == SDLK_LCTRL || keyBuffer.at(1) == SDLK_RCTRL)) {
-                //alt ctrl keybinds
-                //move current surface forward
-                if (keyBuffer.at(2) == SDLK_k)
-                    window::get().mvCurrentSurf(1);
-                //move current surface backward
-                if (keyBuffer.at(2) == SDLK_j)
-                    window::get().mvCurrentSurf(-1);
-            }
-            if (keyBuffer.size() > 2 && (keyBuffer.at(1) == SDLK_LSHIFT || keyBuffer.at(1) == SDLK_RSHIFT)) {
-                //alt shift keybinds
-                //increase currfent surface size
-                if (keyBuffer.at(2) == SDLK_k)
-                    window::get().resizeCurrentSurf(10);
-                //decrease currfent surface size
-                if (keyBuffer.at(2) == SDLK_j)
-                    window::get().resizeCurrentSurf(-10);
-            }
-        }
-        //ctrl hotkey checks
-        if (keyBuffer.size() > 1 && keyBuffer.at(0) == SDLK_LCTRL || keyBuffer.size() > 1 && keyBuffer.at(0) == SDLK_RCTRL) {
-            for (auto& k: ctrlHotkeySearch) {
-                if (k.first.size() == 1) {
-                    if (keyBuffer.at(1) == k.first.at(0)) {
-                        if (!ctrlHotkeys.at(k.second).second) {
-                            ctrlHotkeys.at(k.second).first();
-                            ctrlHotkeys.at(k.second).second = true;
-                        }
+
+        //hotkey checks
+        if (keyBuffer.size() > 1) {
+            uint8_t hotkeyN = 0;
+            for (auto h: hotkeys) {
+                uint8_t i = 0;
+                std::vector<bool> kState;
+                for (auto k: h.first) {
+                    if (keyBuffer.size() - 1 < i) {
+                        kState.push_back(false);
+                        break;
                     }
+                    uint32_t currentKey = keyBuffer.at(i);
+                    if (k == 'A' && currentKey == SDLK_LALT)
+                        kState.push_back(true);
+                    else if (k == 'C' && (currentKey == SDLK_LCTRL || currentKey == SDLK_RCTRL))
+                        kState.push_back(true);
+                    else if (k == 'S' && (currentKey == SDLK_LSHIFT || currentKey == SDLK_RSHIFT))
+                        kState.push_back(true);
+                    else if (k == 'T' && currentKey == SDLK_TAB)
+                        kState.push_back(true);
+                    else if (k == currentKey - 47)
+                        kState.push_back(true);
+                    else if (k == currentKey)
+                        kState.push_back(true);
+                    else 
+                        kState.push_back(false);
+                    ++i;
                 }
-                else if ((keyBuffer.at(1) == SDLK_LSHIFT || keyBuffer.at(1) == SDLK_RSHIFT) && keyBuffer.size() == 3) {
-                    if (keyBuffer.at(2) == k.first.at(1)) {
-                        if (!ctrlHotkeys.at(k.second).second) {
-                            ctrlHotkeys.at(k.second).first();
-                            ctrlHotkeys.at(k.second).second = true;
-                        }
-                    }
+                if (std::all_of(kState.begin(), kState.end(), [](bool v) { return v; }) && !hotkeyStates.at(hotkeyN)) {
+                    hotkeys.at(h.first)();
+                    hotkeyStates.at(hotkeyN) = true;
                 }
-            }
-        }
-        //alt hotkey checks
-        if (keyBuffer.size() > 1 && keyBuffer.at(0) == SDLK_LALT) {
-            for (auto& k: altHotkeySearch) {
-                if (k.first.size() == 1) {
-                    if (keyBuffer.at(1) == k.first.at(0)) {
-                        if (!altHotkeys.at(k.second).second) {
-                            altHotkeys.at(k.second).first();
-                            altHotkeys.at(k.second).second = true;
-                        }
-                    }
-                }
-                else if ((keyBuffer.at(1) == SDLK_LSHIFT || keyBuffer.at(1) == SDLK_RSHIFT) && keyBuffer.size() == 3) {
-                    if (keyBuffer.at(2) == k.first.at(1)) {
-                        if (!altHotkeys.at(k.second).second) {
-                            altHotkeys.at(k.second).first();
-                            altHotkeys.at(k.second).second = true;
-                        }
-                    }
-                }
+                ++hotkeyN;
             }
         }
     }

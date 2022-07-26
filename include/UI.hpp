@@ -86,10 +86,8 @@ namespace ui {
         eventHandler() {};
         static eventHandler instance;
         SDL_Event event;
-        std::vector<std::pair<std::function<void()>, bool>> ctrlHotkeys;
-        std::unordered_map<std::string, uint8_t> ctrlHotkeySearch;
-        std::vector<std::pair<std::function<void()>, bool>> altHotkeys;
-        std::unordered_map<std::string, uint8_t> altHotkeySearch;
+        std::unordered_map<std::string, std::function<void()>> hotkeys;
+        std::vector<bool> hotkeyStates;
     };
 
     class color {
