@@ -347,6 +347,6 @@ namespace ui {
     :size(p_size), buttonRect(math::vec2i(), size) {
     }
 
-    void render() {}
-    void udpate() {}
+    void button::render() {}
+    void button::update() {}
 }
