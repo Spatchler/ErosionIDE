@@ -36,6 +36,19 @@ namespace ui {
         void operator()(std::pair<rect*, color*> p);
     };
 
+    class color {
+    public:
+        color() {}
+        color(uint8_t p_r, uint8_t p_g, uint8_t p_b);
+        color(uint8_t p_r, uint8_t p_g, uint8_t p_b, uint8_t p_a);
+
+        SDL_Color* getSDLColor();
+
+        uint8_t r, g, b, a;
+    private:
+        SDL_Color SDLColor;
+    };
+
     class window {
     public:
         window(const window&) = delete;
@@ -55,7 +68,9 @@ namespace ui {
         std::vector<short> splitOffset;
         std::vector<surface*> layer;
         surface* currentSurf;
-        bool running, initalized, renderState, updateState, updateSizes;
+        bool running, initalized, renderState, updateState, updateSizes, outline;
+        color outlineColor;
+        uint32_t outlineThinkness;
 
         SDL_Renderer* getSDLRenderer();
         SDL_Window* getSDLWindow();
@@ -91,25 +106,13 @@ namespace ui {
         std::vector<bool> hotkeyStates;
     };
 
-    class color {
-    public:
-        color() {}
-        color(uint8_t p_r, uint8_t p_g, uint8_t p_b);
-        color(uint8_t p_r, uint8_t p_g, uint8_t p_b, uint8_t p_a);
-
-        SDL_Color* getSDLColor();
-
-        uint8_t r, g, b, a;
-    private:
-        SDL_Color SDLColor;
-    };
-
     class rect {
     public:
         rect(math::vec2i p_pos, math::vec2i p_size);
 
         void update();
         void render(color* c);
+        void render(color* c, color& oc, uint32_t& ot);
 
         SDL_Rect* getSDLRect();
 
@@ -118,6 +121,15 @@ namespace ui {
         math::vec2i size;
     private:
         SDL_Rect SDLRect;
+    };
+
+    class texture {
+    public:
+        texture(const char* p_filePath);
+
+        SDL_Texture* getSDLTexture();
+    private:
+        SDL_Texture* sdlTexture;
     };
     
     class surface {
@@ -130,7 +142,7 @@ namespace ui {
 
         std::vector<std::pair<std::vector<uint8_t>, math::axis>> splits;
         std::vector<std::variant<surface*, obj*>> layer;
-        bool enabled;
+        bool enabled, outline;
         math::vec2i size;
         math::vec2i pos;
         color bgColor;
@@ -140,15 +152,27 @@ namespace ui {
 
     class obj {
     public:
-        obj(surface* p_surf, const math::vec2i& p_pos, short& p_layer);
+        virtual void render() = 0;
+        virtual void update() = 0;
 
-        void render();
-        void update();
+        virtual ~obj() = default;
+    private:
+    };
 
-        math::vec2i pos;
-        surface* surf;
-        short layer;
-        bool enabled;
+    class button: public obj {
+    public:
+        button(math::vec2i p_size, texture* p_textureNormal, texture* p_textureHovering, texture* p_texturePressed);
+
+        void render() override;
+        void update() override;
+
+        math::vec2i size;
+
+        texture* textureNormal;
+        texture* textureHovering;
+        texture* texturePressed;
+
+        rect buttonRect;
     private:
     };
 }

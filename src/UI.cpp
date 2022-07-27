@@ -44,14 +44,14 @@ namespace ui {
             screen, renderer = NULL;
 
             if (SDL_Init(SDL_INIT_VIDEO) > 0)
-                std::cout << "SDL_Init failed, SDL_ERROR: " << SDL_GetError() << "\n";
+                std::cout << "ERR: SDL_Init failed, SDL_ERROR: " << SDL_GetError() << "\n";
             if (!(IMG_Init(IMG_INIT_PNG)))
-                std::cout << "IMG_Init failed, Error: " << SDL_GetError() << "\n";
+                std::cout << "ERR: IMG_Init failed, Error: " << SDL_GetError() << "\n";
 
             screen = SDL_CreateWindow(p_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, p_size.x, p_size.y, SDL_WINDOW_RESIZABLE);
 
             if (screen == NULL)
-                std::cout << "Window init failed error:" << SDL_GetError() << "\n";
+                std::cout << "ERR: Window init failed error:" << SDL_GetError() << "\n";
 
             renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_ACCELERATED && SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
@@ -60,7 +60,7 @@ namespace ui {
             size = p_size;
             renderState = true;
         }
-        else std::cout << "Cannot init twice" << "\n";
+        else std::cout << "ERR: Cannot init twice" << "\n";
     }
 
     void window::render() {
@@ -74,8 +74,15 @@ namespace ui {
             this->split(splitRatio, splitAxis, layer, true);
         }
         //update
-        for (surface* s: layer)
+        uint8_t i = 0;
+        for (surface* s: layer) {
+            if (i == focusPos.first)
+                s->outline = true;
+            else
+                s->outline = false;
             s->render();
+            ++i;
+        }
         //render
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderPresent(renderer);
@@ -120,13 +127,13 @@ namespace ui {
         std::iter_swap(layer.begin() + focusPos.first, layer.begin() + (layer.size() + ((focusPos.first - v) % layer.size())) % layer.size());
         std::iter_swap(splitRatio.begin() + focusPos.first, splitRatio.begin() + (splitRatio.size() + ((focusPos.first - v) % splitRatio.size())) % splitRatio.size());
         std::iter_swap(splitOffset.begin() + focusPos.first, splitOffset.begin() + (splitOffset.size() + ((focusPos.first - v) % splitOffset.size())) % splitOffset.size());
+        this->mvFocus(v);
         updateSizes = true;
         renderState = true;
     }
     void window::resizeCurrentSurf(char v) {
         splitOffset.at(focusPos.first) += v;
         splitOffset.at((layer.size() + (focusPos.first + 1 % layer.size())) % layer.size()) -= v;
-        // *layer.at(focusPos.first)->size.getAxis(splitAxis) += v;
         updateSizes = true;
         renderState = true;
     }
@@ -241,6 +248,7 @@ namespace ui {
         SDLRect.h = size.y;
     }
 
+    //normal render
     void rect::render(color* c) {
         SDLRect.x = pos.x;
         SDLRect.y = pos.y;
@@ -253,10 +261,35 @@ namespace ui {
             SDL_RenderDrawRect(window::get().getSDLRenderer(), &SDLRect);
         SDL_SetRenderDrawColor(window::get().getSDLRenderer(), 0, 0, 0, 255);
     }
+    //outline render
+    void rect::render(color* c, color& oc, uint32_t& ot) {
+        SDLRect.x = pos.x + ot / 2;
+        SDLRect.y = pos.y + ot / 2;
+        SDLRect.w = size.x - ot;
+        SDLRect.h = size.y - ot;
+        SDL_Rect outlineRect = {pos.x, pos.y, size.x, size.y};
+        SDL_SetRenderDrawColor(window::get().getSDLRenderer(), oc.r, oc.g, oc.b, oc.a);
+        SDL_RenderFillRect(window::get().getSDLRenderer(), &outlineRect);
+        SDL_SetRenderDrawColor(window::get().getSDLRenderer(), c->r, c->g, c->b, c->a);
+        if (filled)
+            SDL_RenderFillRect(window::get().getSDLRenderer(), &SDLRect);
+        else
+            SDL_RenderDrawRect(window::get().getSDLRenderer(), &SDLRect);
+        SDL_SetRenderDrawColor(window::get().getSDLRenderer(), 0, 0, 0, 255);
+    }
 
     SDL_Rect* rect::getSDLRect() {
         return &SDLRect;
     }
+
+    texture::texture(const char* p_filePath)
+    :sdlTexture(NULL) {
+        sdlTexture = IMG_LoadTexture(window::get().getSDLRenderer(), p_filePath);
+        if (sdlTexture == NULL)
+            std::cout << "ERR: Failed loading texture: " << p_filePath << ", " << SDL_GetError() << "\n";
+    }
+
+    SDL_Texture* texture::getSDLTexture() { return sdlTexture; }
 
     surface::surface()
     :enabled(true), r(math::vec2i(0, 0), math::vec2i(0, 0)), bgColor(0, 0, 0) {
@@ -266,7 +299,10 @@ namespace ui {
         r.size = size;
         r.pos = pos;
         if (enabled) {
-            r.render(&bgColor);
+            if (outline)
+                r.render(&bgColor, window::get().outlineColor, window::get().outlineThinkness);
+            else
+                r.render(&bgColor);
             for (auto c: layer)
                 std::visit(renderProcess{}, c);
         }
@@ -296,17 +332,6 @@ namespace ui {
         }
     }
 
-    obj::obj(surface* p_surf, const math::vec2i& p_pos, short& p_layer) 
-    :pos(p_pos), layer(p_layer), surf(p_surf), enabled(true) {
-        if (layer < 0);
-    }
-
-    void obj::render() {
-    }
-
-    void obj::update() {
-    }
-
     color::color(uint8_t p_r, uint8_t p_g, uint8_t p_b)
     :r(p_r), g(p_g), b(p_b) {
         SDLColor = {r, g, b};
@@ -316,7 +341,12 @@ namespace ui {
         SDLColor = {r, g, b, a};
     }
 
-    SDL_Color* color::getSDLColor() {
-        return &SDLColor;
+    SDL_Color* color::getSDLColor() { return &SDLColor; }
+
+    button::button(math::vec2i p_size, texture* p_textureNormal, texture* p_textureHovering, texture* p_texturePressed)
+    :size(p_size), buttonRect(math::vec2i(), size) {
     }
+
+    void render() {}
+    void udpate() {}
 }
