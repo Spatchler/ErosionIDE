@@ -38,7 +38,7 @@ namespace ui {
 
     class color {
     public:
-        color() {}
+        color();
         color(uint8_t p_r, uint8_t p_g, uint8_t p_b);
         color(uint8_t p_r, uint8_t p_g, uint8_t p_b, uint8_t p_a);
 
@@ -97,6 +97,8 @@ namespace ui {
 
         bool keys[332];
         std::vector<uint32_t> keyBuffer;
+        math::vec2i mousePos;
+        uint32_t mouseButtons;
         bool resize;
     private:
         eventHandler() {};
@@ -108,6 +110,7 @@ namespace ui {
 
     class rect {
     public:
+        rect();
         rect(math::vec2i p_pos, math::vec2i p_size);
 
         void update();
@@ -125,7 +128,11 @@ namespace ui {
 
     class texture {
     public:
-        texture(const char* p_filePath);
+        texture();
+
+        void load(const char* p_filePath);
+
+        void render(rect* renderRect);
 
         SDL_Texture* getSDLTexture();
     private:
@@ -139,6 +146,7 @@ namespace ui {
         void render();
         void update();
         void split(std::vector<uint8_t> p_ratio, math::axis p_axis, std::vector<surface*> p_surfs);
+        void addObject(obj* p_obj, math::vec2i pos);
 
         std::vector<std::pair<std::vector<uint8_t>, math::axis>> splits;
         std::vector<std::variant<surface*, obj*>> layer;
@@ -159,20 +167,42 @@ namespace ui {
     private:
     };
 
-    class button: public obj {
+    enum buttonState: uint8_t {
+        BUTTONNORMAL, BUTTONHOVERING, BUTTONPRESSED
+    };
+
+    class textureButton: public obj {
     public:
-        button(math::vec2i p_size, texture* p_textureNormal, texture* p_textureHovering, texture* p_texturePressed);
+        textureButton(rect p_buttonRect, texture* p_textureNormal, texture* p_textureHovering, texture* p_texturePressed);
 
         void render() override;
         void update() override;
-
-        math::vec2i size;
 
         texture* textureNormal;
         texture* textureHovering;
         texture* texturePressed;
 
         rect buttonRect;
+        buttonState state;
+    private:
+    };
+
+    class rectButton: public obj {
+    public:
+        rectButton(rect p_rect, std::string p_content, color& p_normalColor, color& p_hoveringColor, color& p_pressedColor);
+        rectButton(rect p_rect, uint32_t& p_outlineThickness, std::string p_content, std::pair<color, color> p_normalColors, std::pair<color, color> p_hoveringColors, std::pair<color, color> p_pressedColors);
+
+        void render() override;
+        void update() override;
+
+        rect buttonRect;
+        bool outline;
+        uint32_t outlineThinkness;
+        std::pair<color, color> normalColors;
+        std::pair<color, color> hoveringColors;
+        std::pair<color, color> pressedColors;
+        std::string content;
+        buttonState state;
     private:
     };
 }

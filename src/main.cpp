@@ -45,10 +45,25 @@ static std::unordered_map<std::string, ui::color> pallete {
 //surfaces
 static ui::surface mainWorkspace, fileExplorer;
 
+//textures
+static ui::texture testButtonNormalTexture;
+static ui::texture testButtonHoveringTexture;
+static ui::texture testButtonPressedTexture;
+
+//objects
+static ui::textureButton testButton(ui::rect(), &testButtonNormalTexture, &testButtonHoveringTexture, &testButtonPressedTexture);
+static ui::rectButton testRectButton(ui::rect(math::vec2i(50, 50), math::vec2i(50, 50)), "test content", pallete["red_l"], pallete["green_l"], pallete["yellow_l"]);
+
 //initalization function called once on progam startup
 void init() {
     //init window
     window.init("Erosion IDE - vALPHA", vec2i(1280, 720));
+
+    //load textures
+    testButtonNormalTexture.load("res/images/normal.png");
+    testButtonHoveringTexture.load("res/images/hovering.png");
+    testButtonPressedTexture.load("res/images/pressed.png");
+
     //show hide hotkey
     eventHandler.addHotkey("Af", []{
         std::cout << "show/hide" << "\n";
@@ -95,6 +110,10 @@ void init() {
 
     //file explorer
     fileExplorer.bgColor = pallete["bg_h"];
+
+    //add objects
+    //mainWorkspace.addObject(&testButton, vec2i(50, 50));
+    mainWorkspace.addObject(&testRectButton, vec2i(50, 50));
 
     //split window
     window.split({1, 4}, AxisX, {&fileExplorer, &mainWorkspace});

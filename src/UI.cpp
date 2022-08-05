@@ -196,6 +196,10 @@ namespace ui {
             }
         }
 
+        //mouse
+        mouseButtons = SDL_GetMouseState(&mousePos.x, &mousePos.y);
+        mousePos.update();
+
         //hotkey checks
         if (keyBuffer.size() > 1) {
             uint8_t hotkeyN = 0;
@@ -233,12 +237,14 @@ namespace ui {
         }
     }
 
+    rect::rect()
+    :filled(true), pos(math::vec2i()), size(math::vec2i()) {
+        this->update();
+    }
+
     rect::rect(math::vec2i p_pos, math::vec2i p_size) 
     :filled(true), pos(p_pos), size(p_size) {
-        SDLRect.x = pos.x;
-        SDLRect.y = pos.y;
-        SDLRect.w = size.x;
-        SDLRect.h = size.y;
+        this->update();
     }
 
     void rect::update() {
@@ -250,10 +256,7 @@ namespace ui {
 
     //normal render
     void rect::render(color* c) {
-        SDLRect.x = pos.x;
-        SDLRect.y = pos.y;
-        SDLRect.w = size.x;
-        SDLRect.h = size.y;
+        this->update();
         SDL_SetRenderDrawColor(window::get().getSDLRenderer(), c->r, c->g, c->b, c->a);
         if (filled)
             SDL_RenderFillRect(window::get().getSDLRenderer(), &SDLRect);
@@ -282,11 +285,20 @@ namespace ui {
         return &SDLRect;
     }
 
-    texture::texture(const char* p_filePath)
-    :sdlTexture(NULL) {
+    texture::texture()
+    :sdlTexture(nullptr) {
+    }
+
+    void texture::load(const char* p_filePath) {
         sdlTexture = IMG_LoadTexture(window::get().getSDLRenderer(), p_filePath);
-        if (sdlTexture == NULL)
+        if (sdlTexture == nullptr)
             std::cout << "ERR: Failed loading texture: " << p_filePath << ", " << SDL_GetError() << "\n";
+    }
+
+    void texture::render(rect* renderRect) {
+        std::cout << "on texture render" << "\n";
+        SDL_RenderCopy(window::get().getSDLRenderer(), sdlTexture, NULL, renderRect->getSDLRect());
+        std::cout << "passed texture render" << "\n";
     }
 
     SDL_Texture* texture::getSDLTexture() { return sdlTexture; }
@@ -331,6 +343,14 @@ namespace ui {
             layer.emplace_back(currentSurf);
         }
     }
+    
+    void surface::addObject(obj* p_obj, math::vec2i pos) {
+        layer.emplace_back(p_obj);
+    }
+
+    color::color()
+    :r(0), g(0), b(0) {
+    }
 
     color::color(uint8_t p_r, uint8_t p_g, uint8_t p_b)
     :r(p_r), g(p_g), b(p_b) {
@@ -343,10 +363,65 @@ namespace ui {
 
     SDL_Color* color::getSDLColor() { return &SDLColor; }
 
-    button::button(math::vec2i p_size, texture* p_textureNormal, texture* p_textureHovering, texture* p_texturePressed)
-    :size(p_size), buttonRect(math::vec2i(), size) {
+    textureButton::textureButton(rect p_buttonRect, texture* p_textureNormal, texture* p_textureHovering, texture* p_texturePressed)
+    :buttonRect(p_buttonRect), state(BUTTONNORMAL) {
     }
 
-    void button::render() {}
-    void button::update() {}
+    void textureButton::render() {
+        if (state == BUTTONNORMAL) {
+            std::cout << "on normal render" << "\n";
+            textureNormal->render(&buttonRect);
+            std::cout << "after normal render" << "\n";
+        }
+        else if (state == BUTTONHOVERING)
+            textureHovering->render(&buttonRect);
+        else if (state == BUTTONPRESSED)
+            texturePressed->render(&buttonRect);
+    }
+    void textureButton::update() {
+        if (SDL_PointInRect(eventHandler::get().mousePos.getSDLPoint(), buttonRect.getSDLRect()))
+            state = BUTTONHOVERING;
+        else
+            state = BUTTONNORMAL;
+    }
+
+    rectButton::rectButton(rect p_rect, std::string p_content, color& p_normalColor, color& p_hoveringColor, color& p_pressedColor)
+    :buttonRect(p_rect), outline(false), content(p_content), normalColors(p_normalColor, color()), hoveringColors(p_hoveringColor, color()), pressedColors(p_pressedColor, color()) {
+    }
+    rectButton::rectButton(rect p_rect, uint32_t& p_outlineThickness, std::string p_content, std::pair<color, color> p_normalColors, std::pair<color, color> p_hoveringColors, std::pair<color, color> p_pressedColors)
+    :buttonRect(p_rect), outline(true), content(p_content), outlineThinkness(p_outlineThickness), normalColors(p_normalColors), hoveringColors(p_hoveringColors), pressedColors(p_pressedColors) {
+    }
+
+    void rectButton::render() {
+        if (state == BUTTONNORMAL) {
+            if (outline)
+                buttonRect.render(&normalColors.first, normalColors.second, outlineThinkness);
+            else
+                buttonRect.render(&normalColors.first);
+        }
+        else if (state == BUTTONHOVERING) {
+            if (outline)
+                buttonRect.render(&hoveringColors.first, hoveringColors.second, outlineThinkness);
+            else
+                buttonRect.render(&hoveringColors.first);
+        }
+        else if (state == BUTTONPRESSED) {
+            if (outline)
+                buttonRect.render(&pressedColors.first, pressedColors.second, outlineThinkness);
+            else
+                buttonRect.render(&pressedColors.first);
+        }
+    }
+    void rectButton::update() {
+        if (SDL_PointInRect(eventHandler::get().mousePos.getSDLPoint(), buttonRect.getSDLRect())) {
+            state = BUTTONHOVERING;
+            if ((eventHandler::get().mouseButtons & SDL_BUTTON_LMASK) != 0)
+                state = BUTTONPRESSED;
+            window::get().renderState = true;
+        }
+        else {
+            state = BUTTONNORMAL;
+            window::get().renderState = true;
+        }
+    }
 }
