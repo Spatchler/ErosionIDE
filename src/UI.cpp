@@ -321,6 +321,11 @@ namespace ui {
     }
 
     void surface::update() {
+        if (eventHandler::get().resize) {
+            for (auto u: posS) {
+                
+            }
+        }
         for (auto c: layer)
             std::visit(updateProcess{}, c);
     }
@@ -344,8 +349,13 @@ namespace ui {
         }
     }
     
-    void surface::addObject(obj* p_obj, math::vec2i pos) {
-        layer.emplace_back(p_obj);
+    void surface::add(obj* p_i, math::vec2i pos) {
+        layer.emplace_back(std::make_pair(p_i, true));
+        posS.emplace_back(std::make_pair(pos, layer.size() - 1));
+    }
+    void surface::add(surface* p_i, math::vec2i pos) {
+        layer.emplace_back(std::make_pair(p_i, true));
+        posS.emplace_back(std::make_pair(pos, layer.size() - 1));
     }
 
     color::color()
@@ -364,56 +374,59 @@ namespace ui {
     SDL_Color* color::getSDLColor() { return &SDLColor; }
 
     textureButton::textureButton(rect p_buttonRect, texture* p_textureNormal, texture* p_textureHovering, texture* p_texturePressed)
-    :buttonRect(p_buttonRect), state(BUTTONNORMAL) {
+    :state(BUTTONNORMAL) {
+        objRect = p_buttonRect;
     }
 
     void textureButton::render() {
         if (state == BUTTONNORMAL) {
             std::cout << "on normal render" << "\n";
-            textureNormal->render(&buttonRect);
+            textureNormal->render(&objRect);
             std::cout << "after normal render" << "\n";
         }
         else if (state == BUTTONHOVERING)
-            textureHovering->render(&buttonRect);
+            textureHovering->render(&objRect);
         else if (state == BUTTONPRESSED)
-            texturePressed->render(&buttonRect);
+            texturePressed->render(&objRect);
     }
     void textureButton::update() {
-        if (SDL_PointInRect(eventHandler::get().mousePos.getSDLPoint(), buttonRect.getSDLRect()))
+        if (SDL_PointInRect(eventHandler::get().mousePos.getSDLPoint(), objRect.getSDLRect()))
             state = BUTTONHOVERING;
         else
             state = BUTTONNORMAL;
     }
 
     rectButton::rectButton(rect p_rect, std::string p_content, color& p_normalColor, color& p_hoveringColor, color& p_pressedColor)
-    :buttonRect(p_rect), outline(false), content(p_content), normalColors(p_normalColor, color()), hoveringColors(p_hoveringColor, color()), pressedColors(p_pressedColor, color()) {
+    :outline(false), content(p_content), normalColors(p_normalColor, color()), hoveringColors(p_hoveringColor, color()), pressedColors(p_pressedColor, color()) {
+        objRect = p_rect;
     }
     rectButton::rectButton(rect p_rect, uint32_t& p_outlineThickness, std::string p_content, std::pair<color, color> p_normalColors, std::pair<color, color> p_hoveringColors, std::pair<color, color> p_pressedColors)
-    :buttonRect(p_rect), outline(true), content(p_content), outlineThinkness(p_outlineThickness), normalColors(p_normalColors), hoveringColors(p_hoveringColors), pressedColors(p_pressedColors) {
+    :outline(true), content(p_content), outlineThinkness(p_outlineThickness), normalColors(p_normalColors), hoveringColors(p_hoveringColors), pressedColors(p_pressedColors) {
+        objRect = p_rect;
     }
 
     void rectButton::render() {
         if (state == BUTTONNORMAL) {
             if (outline)
-                buttonRect.render(&normalColors.first, normalColors.second, outlineThinkness);
+                objRect.render(&normalColors.first, normalColors.second, outlineThinkness);
             else
-                buttonRect.render(&normalColors.first);
+                objRect.render(&normalColors.first);
         }
         else if (state == BUTTONHOVERING) {
             if (outline)
-                buttonRect.render(&hoveringColors.first, hoveringColors.second, outlineThinkness);
+                objRect.render(&hoveringColors.first, hoveringColors.second, outlineThinkness);
             else
-                buttonRect.render(&hoveringColors.first);
+                objRect.render(&hoveringColors.first);
         }
         else if (state == BUTTONPRESSED) {
             if (outline)
-                buttonRect.render(&pressedColors.first, pressedColors.second, outlineThinkness);
+                objRect.render(&pressedColors.first, pressedColors.second, outlineThinkness);
             else
-                buttonRect.render(&pressedColors.first);
+                objRect.render(&pressedColors.first);
         }
     }
     void rectButton::update() {
-        if (SDL_PointInRect(eventHandler::get().mousePos.getSDLPoint(), buttonRect.getSDLRect())) {
+        if (SDL_PointInRect(eventHandler::get().mousePos.getSDLPoint(), objRect.getSDLRect())) {
             state = BUTTONHOVERING;
             if ((eventHandler::get().mouseButtons & SDL_BUTTON_LMASK) != 0)
                 state = BUTTONPRESSED;

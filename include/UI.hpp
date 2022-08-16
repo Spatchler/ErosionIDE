@@ -146,10 +146,12 @@ namespace ui {
         void render();
         void update();
         void split(std::vector<uint8_t> p_ratio, math::axis p_axis, std::vector<surface*> p_surfs);
-        void addObject(obj* p_obj, math::vec2i pos);
+        void add(obj* p_i, math::vec2i pos);
+        void add(surface* p_i, math::vec2i pos);
 
         std::vector<std::pair<std::vector<uint8_t>, math::axis>> splits;
         std::vector<std::variant<surface*, obj*>> layer;
+        std::vector<std::pair<math::vec2i, uint32_t>> posS;
         bool enabled, outline;
         math::vec2i size;
         math::vec2i pos;
@@ -162,6 +164,8 @@ namespace ui {
     public:
         virtual void render() = 0;
         virtual void update() = 0;
+
+        rect objRect;
 
         virtual ~obj() = default;
     private:
@@ -182,7 +186,6 @@ namespace ui {
         texture* textureHovering;
         texture* texturePressed;
 
-        rect buttonRect;
         buttonState state;
     private:
     };
@@ -195,7 +198,6 @@ namespace ui {
         void render() override;
         void update() override;
 
-        rect buttonRect;
         bool outline;
         uint32_t outlineThinkness;
         std::pair<color, color> normalColors;

@@ -113,7 +113,7 @@ void init() {
 
     //add objects
     //mainWorkspace.addObject(&testButton, vec2i(50, 50));
-    mainWorkspace.addObject(&testRectButton, vec2i(50, 50));
+    mainWorkspace.add(&testRectButton, vec2i(50, 50));
 
     //split window
     window.split({1, 4}, AxisX, {&fileExplorer, &mainWorkspace});
