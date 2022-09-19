@@ -68,9 +68,9 @@ namespace ui {
         std::vector<short> splitOffset;
         std::vector<surface*> layer;
         surface* currentSurf;
-        bool running, initalized, renderState, updateState, updateSizes, outline;
-        color outlineColor;
-        uint32_t outlineThinkness;
+        bool running, initalized, renderState, updateState, updateSizes, currentSurfOutline;
+        color currentSurfOutlineColor;
+        uint32_t currentSurfOutlineThinkness;
 
         SDL_Renderer* getSDLRenderer();
         SDL_Window* getSDLWindow();
@@ -92,7 +92,12 @@ namespace ui {
         eventHandler(const eventHandler&) = delete;
         static eventHandler& get() { return instance; }
 
-        void addHotkey(std::string h, const std::function<void()>& f);
+        void addHotkey(std::string h, std::string m, const std::function<void()>& f);
+        template <int len>
+        void cycleMode(std::array<std::string, len> cycleArray) {
+            mode = cycleArray.at((cycleArray.size() + (std::find(cycleArray.begin(), cycleArray.end(), mode) - cycleArray.begin() + 1 % cycleArray.size())) % cycleArray.size());
+            std::cout << mode << "\n";
+        }
         void update();
 
         bool keys[332];
@@ -100,11 +105,12 @@ namespace ui {
         math::vec2i mousePos;
         uint32_t mouseButtons;
         bool resize;
+        std::string mode;
     private:
         eventHandler() {};
         static eventHandler instance;
         SDL_Event event;
-        std::unordered_map<std::string, std::function<void()>> hotkeys;
+        std::unordered_map<std::string, std::pair<std::function<void()>, std::string>> hotkeys;
         std::vector<bool> hotkeyStates;
     };
 
@@ -158,6 +164,7 @@ namespace ui {
         color bgColor;
         rect r;
     private:
+        //SDL_Surface* surf;
     };
 
     class obj {

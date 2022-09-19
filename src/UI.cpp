@@ -68,8 +68,6 @@ namespace ui {
         SDL_RenderClear(renderer);
         //rescale window contents
         if (eventHandler::get().resize || updateSizes) {
-            updateSizes = false;
-            eventHandler::get().resize = false;
             SDL_GetWindowSize(screen, &size.x, &size.y);
             this->split(splitRatio, splitAxis, layer, true);
         }
@@ -92,6 +90,8 @@ namespace ui {
         //update
         for (auto c: layer)
             c->update();
+        updateSizes = false;
+        eventHandler::get().resize = false;
     }
 
     void window::split(std::vector<uint8_t> p_ratio, math::axis p_axis, std::vector<surface*> p_surfs, bool p_first) {
@@ -146,8 +146,8 @@ namespace ui {
         SDL_Quit();
     }
 
-    void eventHandler::addHotkey(std::string h, const std::function<void()>& f) {
-        hotkeys.insert({h, f});
+    void eventHandler::addHotkey(std::string h, std::string m, const std::function<void()>& f) {
+        hotkeys.insert({h, {f, m}});
         hotkeyStates.push_back(false);
     }
 
@@ -178,18 +178,17 @@ namespace ui {
                 uint8_t i = 0;
                 for (auto h: hotkeys) {
                     if (h.first.back() == 'A' && currentKey == SDLK_LALT)
-                        hotkeyStates.at(i) == false;
-                    else if (h.first.back() == 'C' && (currentKey == SDLK_LCTRL || currentKey == SDLK_RCTRL))
-                        hotkeyStates.at(i) == false;
-                    else if (h.first.back() == 'S' && (currentKey == SDLK_LSHIFT || currentKey == SDLK_RSHIFT))
-                        hotkeyStates.at(i) == false;
-                    else if (h.first.back() == 'T' && currentKey == SDLK_TAB)
-                        hotkeyStates.at(i) == false;
-                    else if (h.first.back() == currentKey - 47)
-                        hotkeyStates.at(i) == false;
-                    else if (h.first.back() == currentKey) {
                         hotkeyStates.at(i) = false;
-                    }
+                    else if (h.first.back() == 'C' && (currentKey == SDLK_LCTRL || currentKey == SDLK_RCTRL))
+                        hotkeyStates.at(i) = false;
+                    else if (h.first.back() == 'S' && (currentKey == SDLK_LSHIFT || currentKey == SDLK_RSHIFT))
+                        hotkeyStates.at(i) = false;
+                    else if (h.first.back() == 'T' && currentKey == SDLK_TAB)
+                        hotkeyStates.at(i) = false;
+                    else if (h.first.back() == currentKey - 47)
+                        hotkeyStates.at(i) = false;
+                    else if (h.first.back() == currentKey)
+                        hotkeyStates.at(i) = false;
                     ++i;
                 }
                 keyBuffer.erase(std::find(keyBuffer.begin(), keyBuffer.end(), currentKey));
@@ -200,8 +199,8 @@ namespace ui {
         mouseButtons = SDL_GetMouseState(&mousePos.x, &mousePos.y);
         mousePos.update();
 
-        //hotkey checks
-        if (keyBuffer.size() > 1) {
+        //hotkey check
+        if (keyBuffer.size() > 0) {
             uint8_t hotkeyN = 0;
             for (auto h: hotkeys) {
                 uint8_t i = 0;
@@ -224,12 +223,15 @@ namespace ui {
                         kState.push_back(true);
                     else if (k == currentKey)
                         kState.push_back(true);
-                    else 
+                    else
                         kState.push_back(false);
                     ++i;
                 }
-                if (std::all_of(kState.begin(), kState.end(), [](bool v) { return v; }) && !hotkeyStates.at(hotkeyN)) {
-                    hotkeys.at(h.first)();
+                if (std::all_of(kState.begin(), kState.end(), [](bool v){ return v; }) && !hotkeyStates.at(hotkeyN)) {
+                    if (hotkeys.at(h.first).second == "*")
+                        hotkeys.at(h.first).first();
+                    else if (mode == hotkeys.at(h.first).second)
+                        hotkeys.at(h.first).first();
                     hotkeyStates.at(hotkeyN) = true;
                 }
                 ++hotkeyN;
@@ -312,7 +314,7 @@ namespace ui {
         r.pos = pos;
         if (enabled) {
             if (outline)
-                r.render(&bgColor, window::get().outlineColor, window::get().outlineThinkness);
+                r.render(&bgColor, window::get().currentSurfOutlineColor, window::get().currentSurfOutlineThinkness);
             else
                 r.render(&bgColor);
             for (auto c: layer)
@@ -321,9 +323,17 @@ namespace ui {
     }
 
     void surface::update() {
-        if (eventHandler::get().resize) {
+        if (eventHandler::get().resize || window::get().updateSizes) {
             for (auto u: posS) {
-                
+                auto v = std::get_if<ui::obj*>(&layer.at(u.second));
+                if (v != nullptr) {
+                    u.first = math::vec2i(size.x / (100 / u.first.x) - (*v)->objRect.size.x / 2 + pos.x, size.y / (100 / u.first.y) - (*v)->objRect.size.y / 2 + pos.y);
+                    (*v)->objRect.pos = u.first;
+                }
+                else {
+                    u.first = math::vec2i(size.x / (100 / u.first.x) - std::get<ui::surface*>(layer.at(u.second))->size.x / 2, size.y / (100 / u.first.y) - std::get<ui::surface*>(layer.at(u.second))->size.y / 2);
+                    std::get<ui::surface*>(layer.at(u.second))->pos = u.first;
+                }
             }
         }
         for (auto c: layer)
@@ -350,11 +360,11 @@ namespace ui {
     }
     
     void surface::add(obj* p_i, math::vec2i pos) {
-        layer.emplace_back(std::make_pair(p_i, true));
+        layer.emplace_back(p_i);
         posS.emplace_back(std::make_pair(pos, layer.size() - 1));
     }
     void surface::add(surface* p_i, math::vec2i pos) {
-        layer.emplace_back(std::make_pair(p_i, true));
+        layer.emplace_back(p_i);
         posS.emplace_back(std::make_pair(pos, layer.size() - 1));
     }
 

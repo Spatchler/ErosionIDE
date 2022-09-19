@@ -42,7 +42,6 @@ static std::unordered_map<std::string, ui::color> pallete {
     {"orange_l",  ui::color(254, 128,  25)}
 };
 
-//surfaces
 static ui::surface mainWorkspace, fileExplorer;
 
 //textures
@@ -64,46 +63,22 @@ void init() {
     testButtonHoveringTexture.load("res/images/hovering.png");
     testButtonPressedTexture.load("res/images/pressed.png");
 
-    //show hide hotkey
-    eventHandler.addHotkey("Af", []{
-        std::cout << "show/hide" << "\n";
-        window.currentSurf->enabled = !window.currentSurf->enabled;
-    });
-    //cycle current surface focus forward
-    eventHandler.addHotkey("Aj", []{
-        std::cout << "move focus left" << "\n";
-        window.mvFocus(-1);
-    });
-    //cycle current surface focus backward
-    eventHandler.addHotkey("Ak", []{
-        std::cout << "move focus right" << "\n";
-        window.mvFocus(1);
-    });
-    //move current surface forward
-    eventHandler.addHotkey("ACj", []{
-        std::cout << "move left" << "\n";
-        window.mvCurrentSurf(-1);
-    });
-    //move current surface backward
-    eventHandler.addHotkey("ACk", []{
-        std::cout << "move right" << "\n";
-        window.mvCurrentSurf(1);
-    });
-    //increase current surface size
-    eventHandler.addHotkey("ASj", []{
-        std::cout << "resize left" << "\n";
-        window.resizeCurrentSurf(-10);
-    });
-    //decrease current surface size
-    eventHandler.addHotkey("ASk", []{
-        std::cout << "resize right" << "\n";
-        window.resizeCurrentSurf(10);
-    });
+    //hotkeys
+    //layouting
+    eventHandler.mode = "insert";   //set starting mode to insert
+    eventHandler.addHotkey("A", "*",      []{eventHandler.cycleMode<2>({"layout", "insert"});});            //toggle layouting mode
+    eventHandler.addHotkey("h", "layout", []{window.currentSurf->enabled = !window.currentSurf->enabled;}); //show and hide
+    eventHandler.addHotkey("j", "layout", []{window.mvFocus(-1);});                                         //move focus left
+    eventHandler.addHotkey("k", "layout", []{window.mvFocus(1);});                                          //move focus right
+    eventHandler.addHotkey("i", "layout", []{window.mvCurrentSurf(1);});                                    //move surface right
+    eventHandler.addHotkey("u", "layout", []{window.mvCurrentSurf(-1);});                                   //move surface left
+    eventHandler.addHotkey("f", "layout", []{window.resizeCurrentSurf(10);});                               //increase size
+    eventHandler.addHotkey("d", "layout", []{window.resizeCurrentSurf(-10);});                              //decrease size
 
     //add outline around focused surface
-    window.outline = true;
-    window.outlineColor = pallete["blue_h"];
-    window.outlineThinkness = 5;
+    window.currentSurfOutline = true;
+    window.currentSurfOutlineColor = pallete["blue_h"];
+    window.currentSurfOutlineThinkness = 5;
 
     //main workspace
     mainWorkspace.bgColor = pallete["bg"];
@@ -113,7 +88,7 @@ void init() {
 
     //add objects
     //mainWorkspace.addObject(&testButton, vec2i(50, 50));
-    mainWorkspace.add(&testRectButton, vec2i(50, 50));
+    fileExplorer.add(&testRectButton, vec2i(50, 50));
 
     //split window
     window.split({1, 4}, AxisX, {&fileExplorer, &mainWorkspace});
