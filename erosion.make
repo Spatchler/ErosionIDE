@@ -24,7 +24,7 @@ INCLUDES += -Iinclude -Ideps/include
 FORCE_INCLUDE +=
 ALL_CPPFLAGS += $(CPPFLAGS) -MMD -MP $(DEFINES) $(INCLUDES)
 ALL_RESFLAGS += $(RESFLAGS) $(DEFINES) $(INCLUDES)
-LIBS += -lSDL2 -lSDL2_image
+LIBS += -lSDL2 -lSDL2_image -lSDL2_ttf -lharfbuzz -lfreetype -lpng -lbrotlidec -lbrotlicommon -lgraphite2 -lzlib
 LDDEPS +=
 LINKCMD = $(CXX) -o "$@" $(OBJECTS) $(RESOURCES) $(ALL_LDFLAGS) $(LIBS)
 define PREBUILDCMDS

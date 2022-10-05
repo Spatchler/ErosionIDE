@@ -49,9 +49,15 @@ static ui::texture testButtonNormalTexture;
 static ui::texture testButtonHoveringTexture;
 static ui::texture testButtonPressedTexture;
 
-//objects
+//fonts
+static ui::font mainFont("res/fonts/Roboto-Thin.ttf", 24);
+
+//buttons
 static ui::textureButton testButton(ui::rect(), &testButtonNormalTexture, &testButtonHoveringTexture, &testButtonPressedTexture);
-static ui::rectButton testRectButton(ui::rect(math::vec2i(50, 50), math::vec2i(50, 50)), "test content", pallete["red_l"], pallete["green_l"], pallete["yellow_l"]);
+static ui::rectButton testRectButton(ui::rect(math::vec2i(), math::vec2i(50, 50)), 5, "test content", {pallete["red_l"], pallete["red_h"]}, {pallete["green_l"], pallete["red_h"]}, {pallete["yellow_l"], pallete["yellow_h"]}, []{std::cout << "h" << "\n";});
+
+//text boxes
+static ui::textBox testTextBox(ui::rect(math::vec2i(), math::vec2i()), &mainFont, &pallete["aqua_l"]);
 
 //initalization function called once on progam startup
 void init() {
@@ -87,8 +93,8 @@ void init() {
     fileExplorer.bgColor = pallete["bg_h"];
 
     //add objects
-    //mainWorkspace.addObject(&testButton, vec2i(50, 50));
-    fileExplorer.add(&testRectButton, vec2i(50, 50));
+    //fileExplorer.add(&testRectButton, vec2i(50, 50));
+    fileExplorer.add(&testTextBox, vec2i(50, 50));
 
     //split window
     window.split({1, 4}, AxisX, {&fileExplorer, &mainWorkspace});

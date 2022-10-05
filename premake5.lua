@@ -34,7 +34,15 @@ project "erosion"
 
     links {
         "SDL2",
-        "SDL2_image"
+        "SDL2_image",
+        "SDL2_ttf",
+        "harfbuzz",
+        "freetype",
+        "png",
+        "brotlidec",
+        "brotlicommon",
+        "graphite2",
+        "zlib"
     }
 
     libdirs {

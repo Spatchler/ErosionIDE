@@ -11,6 +11,7 @@
 #include <string>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_ttf.h>
 #include "math.hpp"
 
 void init();
@@ -144,6 +145,15 @@ namespace ui {
     private:
         SDL_Texture* sdlTexture;
     };
+
+    class font {
+    public:
+        font(const char* p_filePath, const uint16_t& p_fontSize);
+
+        TTF_Font* getFont();
+    private:
+        TTF_Font* f;
+    };
     
     class surface {
     public:
@@ -199,19 +209,40 @@ namespace ui {
 
     class rectButton: public obj {
     public:
-        rectButton(rect p_rect, std::string p_content, color& p_normalColor, color& p_hoveringColor, color& p_pressedColor);
-        rectButton(rect p_rect, uint32_t& p_outlineThickness, std::string p_content, std::pair<color, color> p_normalColors, std::pair<color, color> p_hoveringColors, std::pair<color, color> p_pressedColors);
+        rectButton(rect p_rect, std::string p_content, color& p_normalColor, color& p_hoveringColor, color& p_pressedColor, const std::function<void()>& f);
+        rectButton(rect p_rect, uint32_t p_outlineThickness, std::string p_content, std::pair<color, color> p_normalColors, std::pair<color, color> p_hoveringColors, std::pair<color, color> p_pressedColors, const std::function<void()>& f);
 
         void render() override;
         void update() override;
 
-        bool outline;
+        bool outline, used;
         uint32_t outlineThinkness;
         std::pair<color, color> normalColors;
         std::pair<color, color> hoveringColors;
         std::pair<color, color> pressedColors;
         std::string content;
         buttonState state;
+        std::function<void()> function;
     private:
+    };
+
+    class textBox: public obj {
+    public:
+        textBox(rect p_rect, font* f, color* c);
+        ~textBox();
+
+        void render() override;
+        void update() override;
+
+        void addText(const std::string& p_text);
+
+        std::vector<std::string> text;
+
+        font* textFont;
+        color* textColor;
+    private:
+        SDL_Surface* textSurf;
+        SDL_Rect textRect;
+        SDL_Texture* textTexture;
     };
 }

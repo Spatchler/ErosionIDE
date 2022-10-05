@@ -24,7 +24,8 @@ bin-int/debug/linux/UI.o: src/UI.cpp include/UI.hpp \
  deps/include/SDL2/SDL_shape.h deps/include/SDL2/SDL_system.h \
  deps/include/SDL2/SDL_timer.h deps/include/SDL2/SDL_version.h \
  deps/include/SDL2/SDL_locale.h deps/include/SDL2/SDL_misc.h \
- deps/include/SDL2/SDL_image.h deps/include/SDL2/SDL.h include/math.hpp
+ deps/include/SDL2/SDL_image.h deps/include/SDL2/SDL.h \
+ deps/include/SDL2/SDL_ttf.h include/math.hpp
 include/UI.hpp:
 deps/include/SDL2/SDL.h:
 deps/include/SDL2/SDL_main.h:
@@ -78,4 +79,5 @@ deps/include/SDL2/SDL_locale.h:
 deps/include/SDL2/SDL_misc.h:
 deps/include/SDL2/SDL_image.h:
 deps/include/SDL2/SDL.h:
+deps/include/SDL2/SDL_ttf.h:
 include/math.hpp:

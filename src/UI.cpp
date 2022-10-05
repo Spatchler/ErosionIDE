@@ -305,6 +305,14 @@ namespace ui {
 
     SDL_Texture* texture::getSDLTexture() { return sdlTexture; }
 
+    font::font(const char* p_filePath, const uint16_t& p_fontSize) {
+        f = TTF_OpenFont(p_filePath, p_fontSize);
+    }
+
+    TTF_Font* font::getFont() {
+        return f;
+    }
+
     surface::surface()
     :enabled(true), r(math::vec2i(0, 0), math::vec2i(0, 0)), bgColor(0, 0, 0) {
     }
@@ -406,16 +414,17 @@ namespace ui {
             state = BUTTONNORMAL;
     }
 
-    rectButton::rectButton(rect p_rect, std::string p_content, color& p_normalColor, color& p_hoveringColor, color& p_pressedColor)
-    :outline(false), content(p_content), normalColors(p_normalColor, color()), hoveringColors(p_hoveringColor, color()), pressedColors(p_pressedColor, color()) {
+    rectButton::rectButton(rect p_rect, std::string p_content, color& p_normalColor, color& p_hoveringColor, color& p_pressedColor, const std::function<void()>& f)
+    :outline(false), content(p_content), normalColors(p_normalColor, color()), hoveringColors(p_hoveringColor, color()), pressedColors(p_pressedColor, color()), function(f) {
         objRect = p_rect;
     }
-    rectButton::rectButton(rect p_rect, uint32_t& p_outlineThickness, std::string p_content, std::pair<color, color> p_normalColors, std::pair<color, color> p_hoveringColors, std::pair<color, color> p_pressedColors)
-    :outline(true), content(p_content), outlineThinkness(p_outlineThickness), normalColors(p_normalColors), hoveringColors(p_hoveringColors), pressedColors(p_pressedColors) {
+    rectButton::rectButton(rect p_rect, uint32_t p_outlineThickness, std::string p_content, std::pair<color, color> p_normalColors, std::pair<color, color> p_hoveringColors, std::pair<color, color> p_pressedColors, const std::function<void()>& f)
+    :outline(true), content(p_content), outlineThinkness(p_outlineThickness), normalColors(p_normalColors), hoveringColors(p_hoveringColors), pressedColors(p_pressedColors), function(f) {
         objRect = p_rect;
     }
 
     void rectButton::render() {
+        std::cout << "nnnnn" << "\n";
         if (state == BUTTONNORMAL) {
             if (outline)
                 objRect.render(&normalColors.first, normalColors.second, outlineThinkness);
@@ -437,14 +446,56 @@ namespace ui {
     }
     void rectButton::update() {
         if (SDL_PointInRect(eventHandler::get().mousePos.getSDLPoint(), objRect.getSDLRect())) {
-            state = BUTTONHOVERING;
-            if ((eventHandler::get().mouseButtons & SDL_BUTTON_LMASK) != 0)
+            if ((eventHandler::get().mouseButtons & SDL_BUTTON_LMASK) != 0) {
+                if (!used)
+                    function();
                 state = BUTTONPRESSED;
+                used = true;
+            }
+            else {
+                state = BUTTONHOVERING;
+                used = false;
+            }
             window::get().renderState = true;
         }
         else {
+            used = false;
             state = BUTTONNORMAL;
             window::get().renderState = true;
         }
     }
+
+    textBox::textBox(rect p_rect, font* f, color* c)
+    :textFont(f), textColor(c) {
+        objRect = p_rect;
+        text.push_back("");
+    }
+
+    void textBox::render() {
+        std::cout << "h" << "\n";
+        //*textColor->getSDLColor()
+        textSurf = TTF_RenderText_Solid(textFont->getFont(), "put your text here", {255, 255, 255});
+        textTexture = SDL_CreateTextureFromSurface(window::get().getSDLRenderer(), textSurf);
+        textRect.x = 0;
+        textRect.y = 0;
+        textRect.w = 100;
+        textRect.h = 100;
+        SDL_RenderCopy(window::get().getSDLRenderer(), textTexture, NULL, &textRect);
+        
+    }
+    void textBox::update() {
+        //std::cout << "h" << "\n";
+        //char currentKey = eventHandler::get().keyBuffer.back();
+        //if (currentKey > 96 && currentKey < 123)
+        //    text.back().push_back(currentKey);
+    }
+
+    textBox::~textBox() {
+        SDL_FreeSurface(textSurf);
+        SDL_DestroyTexture(textTexture);
+    }
+
+    // void textBox::addText(const std::string& p_text) {
+    //     for ()
+    // }
 }
