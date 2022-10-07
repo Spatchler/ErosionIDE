@@ -149,6 +149,7 @@ namespace ui {
     class font {
     public:
         font(const char* p_filePath, const uint16_t& p_fontSize);
+        ~font();
 
         TTF_Font* getFont();
     private:

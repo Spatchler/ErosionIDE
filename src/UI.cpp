@@ -47,6 +47,8 @@ namespace ui {
                 std::cout << "ERR: SDL_Init failed, SDL_ERROR: " << SDL_GetError() << "\n";
             if (!(IMG_Init(IMG_INIT_PNG)))
                 std::cout << "ERR: IMG_Init failed, Error: " << SDL_GetError() << "\n";
+            if (!(TTF_Init()))
+                std::cout << "ERR: TTF_Init failed, Error: " << SDL_GetError() << "\n";
 
             screen = SDL_CreateWindow(p_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, p_size.x, p_size.y, SDL_WINDOW_RESIZABLE);
 
@@ -143,6 +145,7 @@ namespace ui {
 
     window::~window() {
         SDL_DestroyWindow(screen);
+        TTF_Quit();
         SDL_Quit();
     }
 
@@ -311,6 +314,10 @@ namespace ui {
 
     TTF_Font* font::getFont() {
         return f;
+    }
+
+    font::~font() {
+        TTF_CloseFont(f);
     }
 
     surface::surface()
