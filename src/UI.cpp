@@ -47,8 +47,10 @@ namespace ui {
                 std::cout << "ERR: SDL_Init failed, SDL_ERROR: " << SDL_GetError() << "\n";
             if (!(IMG_Init(IMG_INIT_PNG)))
                 std::cout << "ERR: IMG_Init failed, Error: " << SDL_GetError() << "\n";
-            if (!(TTF_Init()))
-                std::cout << "ERR: TTF_Init failed, Error: " << SDL_GetError() << "\n";
+            if (TTF_Init() !=  0)
+                std::cout << "ERR: IMG_Init failed, Error: " << SDL_GetError() << "\n";
+            std::cout << "h: " << SDL_GetError() << "\n";
+            SDL_ClearError();
 
             screen = SDL_CreateWindow(p_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, p_size.x, p_size.y, SDL_WINDOW_RESIZABLE);
 
@@ -86,6 +88,10 @@ namespace ui {
         //render
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderPresent(renderer);
+        if (SDL_GetError()) {
+            std::cout << SDL_GetError() << '\n';
+            SDL_ClearError();
+        }
     }
 
     void window::update() {
@@ -310,6 +316,7 @@ namespace ui {
 
     font::font(const char* p_filePath, const uint16_t& p_fontSize) {
         f = TTF_OpenFont(p_filePath, p_fontSize);
+        std::cout << SDL_GetError() << "\n";
     }
 
     TTF_Font* font::getFont() {
@@ -482,6 +489,7 @@ namespace ui {
         std::cout << "h" << "\n";
         //*textColor->getSDLColor()
         textSurf = TTF_RenderText_Solid(textFont->getFont(), "put your text here", {255, 255, 255});
+        std::cout << SDL_GetError() << "\n";
         textTexture = SDL_CreateTextureFromSurface(window::get().getSDLRenderer(), textSurf);
         textRect.x = 0;
         textRect.y = 0;

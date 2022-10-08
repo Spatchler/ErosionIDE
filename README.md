@@ -1,5 +1,5 @@
 # ErosionIDE
-A little code editor and retained mode ui engine project i am working on.
+A little code editor and retained mode ui engine project i am working on. Bear in mind this is my first big c++ project and i am still learning.
 
 It is designed to have an efficient workflow that uses only the keyboard whalst looking elgant, minimal and being highly customizable.
 
