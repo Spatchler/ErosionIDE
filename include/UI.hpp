@@ -148,10 +148,12 @@ namespace ui {
 
     class font {
     public:
-        font(const char* p_filePath, const uint16_t& p_fontSize);
-        ~font();
+        font() {}
 
+        void load(const char* p_filePath, const uint16_t& p_fontSize);
         TTF_Font* getFont();
+
+        ~font();
     private:
         TTF_Font* f;
     };

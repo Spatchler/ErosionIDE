@@ -43,19 +43,18 @@ namespace ui {
         if (!initalized) {
             screen, renderer = NULL;
 
-            if (SDL_Init(SDL_INIT_VIDEO) > 0)
+            if (SDL_Init(SDL_INIT_VIDEO) != 0)
                 std::cout << "ERR: SDL_Init failed, SDL_ERROR: " << SDL_GetError() << "\n";
             if (!(IMG_Init(IMG_INIT_PNG)))
                 std::cout << "ERR: IMG_Init failed, Error: " << SDL_GetError() << "\n";
             if (TTF_Init() !=  0)
-                std::cout << "ERR: IMG_Init failed, Error: " << SDL_GetError() << "\n";
-            std::cout << "h: " << SDL_GetError() << "\n";
-            SDL_ClearError();
+                std::cout << "ERR: IMG_Init failed, Error: " << TTF_GetError() << "\n";
 
             screen = SDL_CreateWindow(p_title, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, p_size.x, p_size.y, SDL_WINDOW_RESIZABLE);
 
             if (screen == NULL)
                 std::cout << "ERR: Window init failed error:" << SDL_GetError() << "\n";
+            SDL_ClearError();
 
             renderer = SDL_CreateRenderer(screen, -1, SDL_RENDERER_ACCELERATED && SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
@@ -89,7 +88,7 @@ namespace ui {
         SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
         SDL_RenderPresent(renderer);
         if (SDL_GetError()) {
-            std::cout << SDL_GetError() << '\n';
+            //std::cout << SDL_GetError() << '\n';
             SDL_ClearError();
         }
     }
@@ -307,16 +306,13 @@ namespace ui {
     }
 
     void texture::render(rect* renderRect) {
-        std::cout << "on texture render" << "\n";
         SDL_RenderCopy(window::get().getSDLRenderer(), sdlTexture, NULL, renderRect->getSDLRect());
-        std::cout << "passed texture render" << "\n";
     }
 
     SDL_Texture* texture::getSDLTexture() { return sdlTexture; }
 
-    font::font(const char* p_filePath, const uint16_t& p_fontSize) {
+    void font::load(const char* p_filePath, const uint16_t& p_fontSize) {
         f = TTF_OpenFont(p_filePath, p_fontSize);
-        std::cout << SDL_GetError() << "\n";
     }
 
     TTF_Font* font::getFont() {
@@ -438,7 +434,6 @@ namespace ui {
     }
 
     void rectButton::render() {
-        std::cout << "nnnnn" << "\n";
         if (state == BUTTONNORMAL) {
             if (outline)
                 objRect.render(&normalColors.first, normalColors.second, outlineThinkness);
@@ -486,16 +481,13 @@ namespace ui {
     }
 
     void textBox::render() {
-        std::cout << "h" << "\n";
-        //*textColor->getSDLColor()
-        textSurf = TTF_RenderText_Solid(textFont->getFont(), "put your text here", {255, 255, 255});
-        std::cout << SDL_GetError() << "\n";
+        textSurf = TTF_RenderText_Solid(textFont->getFont(), "put your text here", *textColor->getSDLColor());
         textTexture = SDL_CreateTextureFromSurface(window::get().getSDLRenderer(), textSurf);
-        textRect.x = 0;
-        textRect.y = 0;
-        textRect.w = 100;
-        textRect.h = 100;
-        SDL_RenderCopy(window::get().getSDLRenderer(), textTexture, NULL, &textRect);
+        // textRect.x = 0;
+        // textRect.y = 0;
+        // textRect.w = 200;
+        // textRect.h = 50;
+        SDL_RenderCopy(window::get().getSDLRenderer(), textTexture, NULL, objRect.getSDLRect());
         
     }
     void textBox::update() {
