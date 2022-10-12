@@ -160,6 +160,7 @@ namespace ui {
     }
 
     void eventHandler::update() {
+        wasKeydown = false;
         while (SDL_PollEvent(&event)) {
             if (event.type == SDL_QUIT)
                 window::get().running = false;
@@ -176,6 +177,8 @@ namespace ui {
                     window::get().updateState = false;
             }
             if (event.type == SDL_KEYDOWN && event.key.repeat == 0) {
+                isUsed = false;
+                wasKeydown = true;
                 std::cout << event.key.keysym.sym << "\n";
                 keyBuffer.push_back(event.key.keysym.sym);
                 // letters        key > 96 && key < 123
@@ -201,6 +204,11 @@ namespace ui {
                 }
                 keyBuffer.erase(std::find(keyBuffer.begin(), keyBuffer.end(), currentKey));
             }
+        }
+
+        if (!wasKeydown) {
+            if (!isUsed)
+                isUsed = true;
         }
 
         //mouse
@@ -424,34 +432,47 @@ namespace ui {
             state = BUTTONNORMAL;
     }
 
-    rectButton::rectButton(rect p_rect, std::string p_content, color& p_normalColor, color& p_hoveringColor, color& p_pressedColor, const std::function<void()>& f)
-    :outline(false), content(p_content), normalColors(p_normalColor, color()), hoveringColors(p_hoveringColor, color()), pressedColors(p_pressedColor, color()), function(f) {
+    rectButton::rectButton(rect p_rect, std::string p_content, font* p_font, std::pair<color, color> p_normalColor, std::pair<color, color> p_hoveringColor, std::pair<color, color> p_pressedColor, const std::function<void()>& f)
+    :outline(false), content(p_content), normalColors({p_normalColor.first, color(), p_normalColor.second}), hoveringColors({p_hoveringColor.first, color(), p_hoveringColor.second}), pressedColors({p_pressedColor.first, color(), p_pressedColor.second}), function(f), textFont(p_font) {
         objRect = p_rect;
     }
-    rectButton::rectButton(rect p_rect, uint32_t p_outlineThickness, std::string p_content, std::pair<color, color> p_normalColors, std::pair<color, color> p_hoveringColors, std::pair<color, color> p_pressedColors, const std::function<void()>& f)
-    :outline(true), content(p_content), outlineThinkness(p_outlineThickness), normalColors(p_normalColors), hoveringColors(p_hoveringColors), pressedColors(p_pressedColors), function(f) {
+    rectButton::rectButton(rect p_rect, uint32_t p_outlineThickness, std::string p_content, font* p_font, std::array<color, 3> p_normalColors, std::array<color, 3> p_hoveringColors, std::array<color, 3> p_pressedColors, const std::function<void()>& f)
+    :outline(true), content(p_content), outlineThinkness(p_outlineThickness), normalColors(p_normalColors), hoveringColors(p_hoveringColors), pressedColors(p_pressedColors), function(f), textFont(p_font) {
         objRect = p_rect;
     }
 
     void rectButton::render() {
+        renderContent = "";
+        for (char c: content) {
+            renderContent.push_back(c);
+        }
         if (state == BUTTONNORMAL) {
             if (outline)
-                objRect.render(&normalColors.first, normalColors.second, outlineThinkness);
+                objRect.render(&normalColors.at(0), normalColors.at(1), outlineThinkness);
             else
-                objRect.render(&normalColors.first);
+                objRect.render(&normalColors.at(0));
+            textSurf = TTF_RenderText_Solid(textFont->getFont(), renderContent.c_str(), *normalColors.at(2).getSDLColor());
         }
         else if (state == BUTTONHOVERING) {
             if (outline)
-                objRect.render(&hoveringColors.first, hoveringColors.second, outlineThinkness);
+                objRect.render(&hoveringColors.at(0), hoveringColors.at(1), outlineThinkness);
             else
-                objRect.render(&hoveringColors.first);
+                objRect.render(&hoveringColors.at(0));
+            textSurf = TTF_RenderText_Solid(textFont->getFont(), renderContent.c_str(), *hoveringColors.at(2).getSDLColor());
         }
         else if (state == BUTTONPRESSED) {
             if (outline)
-                objRect.render(&pressedColors.first, pressedColors.second, outlineThinkness);
+                objRect.render(&pressedColors.at(0), pressedColors.at(1), outlineThinkness);
             else
-                objRect.render(&pressedColors.first);
+                objRect.render(&pressedColors.at(0));
+            textSurf = TTF_RenderText_Solid(textFont->getFont(), renderContent.c_str(), *pressedColors.at(2).getSDLColor());
         }
+        textRect.x = objRect.pos.x + objRect.size.x / 2 - textSurf->w / 2;
+        textRect.y = objRect.pos.y + objRect.size.y / 2 - textSurf->h / 2;
+        textRect.w = textSurf->w;
+        textRect.h = textSurf->h;
+        textTexture = SDL_CreateTextureFromSurface(window::get().getSDLRenderer(), textSurf);
+        SDL_RenderCopy(window::get().getSDLRenderer(), textTexture, NULL, &textRect);
     }
     void rectButton::update() {
         if (SDL_PointInRect(eventHandler::get().mousePos.getSDLPoint(), objRect.getSDLRect())) {
@@ -475,26 +496,48 @@ namespace ui {
     }
 
     textBox::textBox(rect p_rect, font* f, color* c)
-    :textFont(f), textColor(c) {
+    :textFont(f), textColor(c), input(true) {
         objRect = p_rect;
-        text.push_back("");
     }
 
     void textBox::render() {
-        textSurf = TTF_RenderText_Solid(textFont->getFont(), "put your text here", *textColor->getSDLColor());
-        textTexture = SDL_CreateTextureFromSurface(window::get().getSDLRenderer(), textSurf);
-        // textRect.x = 0;
-        // textRect.y = 0;
-        // textRect.w = 200;
-        // textRect.h = 50;
-        SDL_RenderCopy(window::get().getSDLRenderer(), textTexture, NULL, objRect.getSDLRect());
-        
+        if (text.size() > 0) {
+            renderText = "";
+            for (char c: text) {
+                renderText.push_back(c);
+            }
+            textSurf = TTF_RenderText_Solid(textFont->getFont(), renderText.c_str(), *textColor->getSDLColor());
+            textTexture = SDL_CreateTextureFromSurface(window::get().getSDLRenderer(), textSurf);
+            // textRect.x = 0;
+            // textRect.y = 0;
+            // textRect.w = 200;
+            // textRect.h = 50;
+            objRect.size.x = textSurf->w;
+            objRect.size.y = textSurf->h;
+            objRect.update();
+            SDL_RenderCopy(window::get().getSDLRenderer(), textTexture, NULL, objRect.getSDLRect());
+            SDL_FreeSurface(textSurf);
+            SDL_DestroyTexture(textTexture);
+        }
     }
     void textBox::update() {
-        //std::cout << "h" << "\n";
-        //char currentKey = eventHandler::get().keyBuffer.back();
-        //if (currentKey > 96 && currentKey < 123)
-        //    text.back().push_back(currentKey);
+        if (input) {
+            if (eventHandler::get().keyBuffer.size() > 0 && !eventHandler::get().isUsed) {
+                char currentKey = eventHandler::get().keyBuffer.back();
+                if (currentKey == 8 && text.size() > 0)
+                    text.pop_back();
+                if (currentKey == 32)
+                    text.push_back(' ');
+                if (currentKey > 96 && currentKey < 123)
+                    text.push_back(currentKey);
+            }
+        }
+    }
+
+    void textBox::addText(const std::string& p_text) {
+        for (char c: p_text) {
+            text.emplace_back(c);
+        }
     }
 
     textBox::~textBox() {

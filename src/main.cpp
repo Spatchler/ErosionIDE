@@ -54,10 +54,10 @@ static ui::font mainFont;
 
 //buttons
 static ui::textureButton testButton(ui::rect(), &testButtonNormalTexture, &testButtonHoveringTexture, &testButtonPressedTexture);
-static ui::rectButton testRectButton(ui::rect(math::vec2i(), math::vec2i(100, 50)), 5, "test content", {pallete["red_l"], pallete["red_h"]}, {pallete["green_l"], pallete["red_h"]}, {pallete["yellow_l"], pallete["yellow_h"]}, []{std::cout << "h" << "\n";});
+static ui::rectButton testRectButton(ui::rect(math::vec2i(), math::vec2i(200, 100)), 5, "test content", &mainFont, {pallete["red_l"], pallete["red_h"], pallete["red_h"]}, {pallete["green_l"], pallete["green_h"], pallete["green_h"]}, {pallete["yellow_l"], pallete["yellow_h"], pallete["yellow_h"]}, []{std::cout << "h" << "\n";});
 
 //text boxes
-static ui::textBox testTextBox(ui::rect(math::vec2i(), math::vec2i(300, 50)), &mainFont, &pallete["aqua_l"]);
+static ui::textBox testTextBox(ui::rect(math::vec2i(), math::vec2i(150, 25)), &mainFont, &pallete["aqua_l"]);
 
 //initalization function called once on progam startup
 void init() {
@@ -69,8 +69,10 @@ void init() {
     testButtonHoveringTexture.load("res/images/hovering.png");
     testButtonPressedTexture.load("res/images/pressed.png");
 
+    testTextBox.addText("put your text here");
+
     //load font
-    mainFont.load("res/fonts/Roboto-Thin.ttf", 24);
+    mainFont.load("res/fonts/Roboto-Regular.ttf", 24);
 
     //hotkeys
     //layouting
@@ -97,13 +99,14 @@ void init() {
 
     //add objects
     fileExplorer.add(&testRectButton, vec2i(50, 50));
-    fileExplorer.add(&testTextBox, vec2i(50, 50));
+    fileExplorer.add(&testTextBox, vec2i(50, 10));
 
     //split window
     window.split({1, 4}, AxisX, {&fileExplorer, &mainWorkspace});
 }
 //update function called every update "50hz"
 void update() {
+    //testTextBox.addText("a");
 }
 //destroy function called once on program end
 void destroy() {

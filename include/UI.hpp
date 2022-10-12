@@ -105,11 +105,14 @@ namespace ui {
         std::vector<uint32_t> keyBuffer;
         math::vec2i mousePos;
         uint32_t mouseButtons;
-        bool resize;
+        bool resize, isUsed;
         std::string mode;
     private:
         eventHandler() {};
         static eventHandler instance;
+
+        bool wasKeydown;
+
         SDL_Event event;
         std::unordered_map<std::string, std::pair<std::function<void()>, std::string>> hotkeys;
         std::vector<bool> hotkeyStates;
@@ -212,21 +215,27 @@ namespace ui {
 
     class rectButton: public obj {
     public:
-        rectButton(rect p_rect, std::string p_content, color& p_normalColor, color& p_hoveringColor, color& p_pressedColor, const std::function<void()>& f);
-        rectButton(rect p_rect, uint32_t p_outlineThickness, std::string p_content, std::pair<color, color> p_normalColors, std::pair<color, color> p_hoveringColors, std::pair<color, color> p_pressedColors, const std::function<void()>& f);
+        rectButton(rect p_rect, std::string p_content, font* p_font, std::pair<color, color> p_normalColor, std::pair<color, color> p_hoveringColor, std::pair<color, color> p_pressedColor, const std::function<void()>& f);
+        rectButton(rect p_rect, uint32_t p_outlineThickness, std::string p_content, font* p_font, std::array<color, 3> p_normalColors, std::array<color, 3> p_hoveringColors, std::array<color, 3> p_pressedColors, const std::function<void()>& f);
 
         void render() override;
         void update() override;
 
         bool outline, used;
         uint32_t outlineThinkness;
-        std::pair<color, color> normalColors;
-        std::pair<color, color> hoveringColors;
-        std::pair<color, color> pressedColors;
+        std::array<color, 3> normalColors;
+        std::array<color, 3> hoveringColors;
+        std::array<color, 3> pressedColors;
         std::string content;
         buttonState state;
         std::function<void()> function;
+        font* textFont;
     private:
+        std::string renderContent;
+
+        SDL_Rect textRect;
+        SDL_Surface* textSurf;
+        SDL_Texture* textTexture;
     };
 
     class textBox: public obj {
@@ -239,13 +248,17 @@ namespace ui {
 
         void addText(const std::string& p_text);
 
-        std::vector<std::string> text;
+        std::vector<char> text;
 
         font* textFont;
         color* textColor;
+
+        bool input;
     private:
+        std::string renderText;
+
         SDL_Surface* textSurf;
         SDL_Rect textRect;
         SDL_Texture* textTexture;
     };
-}
+};
