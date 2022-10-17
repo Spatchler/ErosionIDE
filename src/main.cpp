@@ -70,6 +70,7 @@ void init() {
     testButtonPressedTexture.load("res/images/pressed.png");
 
     testTextBox.addText("put your text here");
+    testTextBox.positionColor = pallete["blue_l"];
 
     //load font
     mainFont.load("res/fonts/Roboto-Regular.ttf", 24);

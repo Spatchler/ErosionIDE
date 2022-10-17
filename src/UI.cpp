@@ -308,6 +308,7 @@ namespace ui {
     }
 
     void texture::load(const char* p_filePath) {
+        SDL_DestroyTexture(sdlTexture);
         sdlTexture = IMG_LoadTexture(window::get().getSDLRenderer(), p_filePath);
         if (sdlTexture == nullptr)
             std::cout << "ERR: Failed loading texture: " << p_filePath << ", " << SDL_GetError() << "\n";
@@ -318,6 +319,10 @@ namespace ui {
     }
 
     SDL_Texture* texture::getSDLTexture() { return sdlTexture; }
+
+    texture::~texture() {
+        SDL_DestroyTexture(sdlTexture);
+    }
 
     void font::load(const char* p_filePath, const uint16_t& p_fontSize) {
         f = TTF_OpenFont(p_filePath, p_fontSize);
@@ -451,21 +456,21 @@ namespace ui {
                 objRect.render(&normalColors.at(0), normalColors.at(1), outlineThinkness);
             else
                 objRect.render(&normalColors.at(0));
-            textSurf = TTF_RenderText_Solid(textFont->getFont(), renderContent.c_str(), *normalColors.at(2).getSDLColor());
+            textSurf = TTF_RenderText_Blended(textFont->getFont(), renderContent.c_str(), *normalColors.at(2).getSDLColor());
         }
         else if (state == BUTTONHOVERING) {
             if (outline)
                 objRect.render(&hoveringColors.at(0), hoveringColors.at(1), outlineThinkness);
             else
                 objRect.render(&hoveringColors.at(0));
-            textSurf = TTF_RenderText_Solid(textFont->getFont(), renderContent.c_str(), *hoveringColors.at(2).getSDLColor());
+            textSurf = TTF_RenderText_Blended(textFont->getFont(), renderContent.c_str(), *hoveringColors.at(2).getSDLColor());
         }
         else if (state == BUTTONPRESSED) {
             if (outline)
                 objRect.render(&pressedColors.at(0), pressedColors.at(1), outlineThinkness);
             else
                 objRect.render(&pressedColors.at(0));
-            textSurf = TTF_RenderText_Solid(textFont->getFont(), renderContent.c_str(), *pressedColors.at(2).getSDLColor());
+            textSurf = TTF_RenderText_Blended(textFont->getFont(), renderContent.c_str(), *pressedColors.at(2).getSDLColor());
         }
         textRect.x = objRect.pos.x + objRect.size.x / 2 - textSurf->w / 2;
         textRect.y = objRect.pos.y + objRect.size.y / 2 - textSurf->h / 2;
@@ -496,40 +501,86 @@ namespace ui {
     }
 
     textBox::textBox(rect p_rect, font* f, color* c)
-    :textFont(f), textColor(c), input(true) {
+    :textFont(f), textColor(c), input(true), positionRect(math::vec2i(), math::vec2i(2, 50)), charIndex(0), lineIndex(0) {
         objRect = p_rect;
     }
 
     void textBox::render() {
-        if (text.size() > 0) {
+        positionRect.pos.x = objRect.pos.x;
+        positionRect.pos.y = objRect.pos.y;
+        if (text.size() > 0 && charIndex > 0) {
             renderText = "";
-            for (char c: text) {
-                renderText.push_back(c);
+            for (uint16_t i = 0; i < charIndex; ++i) {
+                renderText.push_back(text.at(lineIndex).at(i));
             }
-            textSurf = TTF_RenderText_Solid(textFont->getFont(), renderText.c_str(), *textColor->getSDLColor());
+            textSurf = TTF_RenderText_Blended(textFont->getFont(), renderText.c_str(), *textColor->getSDLColor());
             textTexture = SDL_CreateTextureFromSurface(window::get().getSDLRenderer(), textSurf);
-            // textRect.x = 0;
-            // textRect.y = 0;
-            // textRect.w = 200;
-            // textRect.h = 50;
-            objRect.size.x = textSurf->w;
-            objRect.size.y = textSurf->h;
-            objRect.update();
-            SDL_RenderCopy(window::get().getSDLRenderer(), textTexture, NULL, objRect.getSDLRect());
+            textRect.x = objRect.pos.x;
+            textRect.y = objRect.pos.y;
+            textRect.w = textSurf->w;
+            textRect.h = textSurf->h;
+            // objRect.size.x = textSurf->w;
+            // objRect.size.y = textSurf->h;
+            // objRect.update();
+            positionRect.size.y = textSurf->h;
+            positionRect.pos.x += textSurf->w;
+            SDL_RenderCopy(window::get().getSDLRenderer(), textTexture, NULL, &textRect);
             SDL_FreeSurface(textSurf);
             SDL_DestroyTexture(textTexture);
         }
+        //b
+        if (charIndex < text.size()) {
+            renderText = "";
+            for (uint16_t i = charIndex; i < text.size(); ++i) {
+                renderText.push_back(text.at(lineIndex).at(i));
+            }
+            textRect.x = objRect.pos.x;
+            if (charIndex != 0)
+                textRect.x += textRect.w;
+            textRect.y = objRect.pos.y;
+            textSurf = TTF_RenderText_Blended(textFont->getFont(), renderText.c_str(), *textColor->getSDLColor());
+            textTexture = SDL_CreateTextureFromSurface(window::get().getSDLRenderer(), textSurf);
+            textRect.w = textSurf->w;
+            textRect.h = textSurf->h;
+            SDL_RenderCopy(window::get().getSDLRenderer(), textTexture, NULL, &textRect);
+            SDL_FreeSurface(textSurf);
+            SDL_DestroyTexture(textTexture);
+        }
+        positionRect.render(&positionColor);
     }
     void textBox::update() {
         if (input) {
             if (eventHandler::get().keyBuffer.size() > 0 && !eventHandler::get().isUsed) {
-                char currentKey = eventHandler::get().keyBuffer.back();
-                if (currentKey == 8 && text.size() > 0)
-                    text.pop_back();
-                if (currentKey == 32)
-                    text.push_back(' ');
-                if (currentKey > 96 && currentKey < 123)
-                    text.push_back(currentKey);
+                uint32_t currentKey = eventHandler::get().keyBuffer.back();
+                if (currentKey == 8 && charIndex > 0)  {
+                    window::get().renderState = true;
+                    text.at(lineIndex).erase(text.at(lineIndex).begin() + charIndex - 1);
+                    charIndex -= 1;
+                }
+                else if (currentKey == 32)  {
+                    window::get().renderState = true;
+                    text.at(lineIndex).insert(text.at(lineIndex).begin() + charIndex, ' ');
+                    charIndex += 1;
+                }
+                // else if (currentKey == 13) {
+                    
+                // }
+                else if (currentKey > 96 && currentKey < 123)  {
+                    window::get().renderState = true;
+                    text.at(lineIndex).insert(text.at(lineIndex).begin() + charIndex, currentKey);
+                    charIndex += 1;
+                }
+                else if (currentKey > 47 && currentKey < 58)  {
+                    window::get().renderState = true;
+                    text.at(lineIndex).insert(text.at(lineIndex).begin() + charIndex, currentKey);
+                    charIndex += 1;
+                }
+                else if (currentKey == 1073741904 && charIndex > 0) {
+                    charIndex -= 1;
+                }
+                else if (currentKey == 1073741903 && charIndex < text.size()) {
+                    charIndex += 1;
+                }
             }
         }
     }
@@ -537,6 +588,7 @@ namespace ui {
     void textBox::addText(const std::string& p_text) {
         for (char c: p_text) {
             text.emplace_back(c);
+            ++charIndex;
         }
     }
 

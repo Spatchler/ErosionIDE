@@ -145,6 +145,8 @@ namespace ui {
         void render(rect* renderRect);
 
         SDL_Texture* getSDLTexture();
+
+        ~texture();
     private:
         SDL_Texture* sdlTexture;
     };
@@ -248,17 +250,25 @@ namespace ui {
 
         void addText(const std::string& p_text);
 
-        std::vector<char> text;
+        //std::vector<char> text;
+        std::vector<std::string> text;
 
         font* textFont;
         color* textColor;
+        color positionColor;
+        rect positionRect;
+        uint16_t charIndex, lineIndex;
 
-        bool input;
+        bool input, lineNumbers;
     private:
         std::string renderText;
 
         SDL_Surface* textSurf;
         SDL_Rect textRect;
         SDL_Texture* textTexture;
+
+        //SDL_Surface* textSurfB;
+        //SDL_Rect textRectB;
+        //SDL_Texture* textTextureB;
     };
 };
